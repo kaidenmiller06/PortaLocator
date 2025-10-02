@@ -31,6 +31,9 @@ VALUES
     ('kmiller', 'mypassword1234', 'Kaiden', 'Miller'),
     ('escholes', 'declanisfat', 'Ella',   'Scholes'),
     ('alangley', 'iloveella', 'Alyssa', 'Langley');
+    ('afrist', 'peepeepoopoo13', 'Aaron', 'Frist');
+    ('msmith', 'aaronismydaddy', 'Math', 'Smith');
+    
 
 -- Insert porta potties (user_id values refer to the users inserted above)
 INSERT INTO portapotties (user_id, name, description, rating, x, y)
