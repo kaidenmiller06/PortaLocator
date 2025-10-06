@@ -24,6 +24,9 @@ CREATE TABLE portapotties (
     FOREIGN KEY (user_id) REFERENCES users(id)
 );
 
+-- Create portapotties rating table
+-- PI_D, Rater_id, stars, comments
+
 -- Insert users
 INSERT INTO users (username, password, first_name, last_name)
 VALUES
