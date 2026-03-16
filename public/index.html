@@ -1,0 +1,59 @@
+<html>
+  <head>
+    <title>PortaLocator</title>
+
+    <link rel="stylesheet" type="text/css" href="./global.css" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+  </head>
+  <body style="margin: 0; padding: 0;">
+    <div id="map" style="height: 100vh; width: 100vw;"></div>
+
+    <div class="modal fade" id="createPortaPottyModal" tabindex="-1">
+      <div class="modal-dialog modal-dialog-lower">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">New Porta Potty</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body">
+            <form id="createPortaPottyForm">
+              <input type="hidden" id="create_porta_potty">
+
+              <div class="mb-3">
+                <label for="porta_potty_name" class="form-label">
+                  Class Name <span class="text-danger">*</span>
+                </label>
+                <input type="text" class="form-control" id="porta_potty_name" required>
+              </div>
+
+              <div class="mb-3">
+                <div class="d-flex align-items-center gap-1">
+                  <label for="porta_potty_rating" class="form-label mb-0">Rating</label>
+                  <i
+                    class="fas fa-question-circle text-secondary"
+                    data-bs-toggle="tooltip"
+                    data-bs-html="true"
+                    title="Course codes must have a department code and be followed by numbers (Ex: EN100, PYS200, CS/EGR222)."
+                  ></i>
+                </div>
+                <input type="text" class="form-control" id="porta_potty_rating" maxlength="20">
+              </div>
+
+              <div class="mb-3">
+                <label for="porta_potty_description" class="form-label">Description</label>
+                <textarea class="form-control" id="porta_potty_description"></textarea>
+              </div>
+
+              <button type="submit" class="btn btn-primary w-100">Save Changes</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI" crossorigin="anonymous"></script>
+    <script src="apikey.js"></script>
+    <script type="module" src="./index.js"></script>
+  </body>
+</html>
