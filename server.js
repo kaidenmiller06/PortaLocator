@@ -30,6 +30,19 @@ db.connect((err) => {
 // API Endpoints
 // -----------------------------------------------------
 
+// Runtime config for browser-safe values.
+app.get('/api/config/maps-key', (req, res) => {
+  const mapsApiKey = process.env.GOOGLE_MAPS_API_KEY;
+
+  if (!mapsApiKey) {
+    return res.status(500).json({
+      error: 'Missing GOOGLE_MAPS_API_KEY environment variable'
+    });
+  }
+
+  res.json({ key: mapsApiKey });
+});
+
 // Fetch porta potties
 app.get('/api/porta-potties', (req, res) => {
   db.query('SELECT * FROM porta_potties', (err, results) => {
@@ -40,16 +53,35 @@ app.get('/api/porta-potties', (req, res) => {
 
 // Create porta potty
 app.post('/api/porta-potties', (req, res) => {
-  const { name, latitude, longitude, description, createdBy } = req.body;
+  const { name, latitude, longitude, description, rating, isPrivate, isAccessible, hasWomensProducts, createdBy, createdAt } = req.body;
+
+  if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
+    return res.status(400).json({ error: 'Invalid coordinates' });
+  }
+
   db.query(
-    'INSERT INTO porta_potties (name, latitude, longitude, description, createdBy) VALUES (?, ?, ?, ?, ?)',
-    [name, latitude, longitude, description, createdBy],
+    'INSERT INTO porta_potties (name, latitude, longitude, description, rating, isPrivate, isAccessible, hasWomensProducts, createdBy, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    [name, latitude, longitude, description, rating, isPrivate, isAccessible, hasWomensProducts, createdBy, createdAt],
     (err, result) => {
       if (err) return res.status(500).json({ error: err.message });
-      res.json({ id: result.insertId });
+      res.json({ 
+        id: result.insertId,
+        name,
+        latitude,
+        longitude,
+        description,
+        rating,
+        isPrivate,
+        isAccessible,
+        hasWomensProducts,
+        createdBy,
+        createdAt
+      });
     }
   );
 });
 
 // Listen for requests
-app.listen(process.env.PORT, () => console.log(`Server running on port ${process.env.PORT}`));
+app.listen(3000, () => console.log(`Server running on port 3000`));
+
+// 1. Auth0, 2. WorkOS, 3. OAuth

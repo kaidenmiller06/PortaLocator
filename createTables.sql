@@ -1,3 +1,5 @@
+SET FOREIGN_KEY_CHECKS = 0;
+
 -- -----------------------------------------------------
 -- Table `users`
 -- -----------------------------------------------------
@@ -9,7 +11,7 @@ CREATE TABLE IF NOT EXISTS `users` (
   `password` VARCHAR(255) NOT NULL,
   `fname` VARCHAR(45) NULL,
   `lname` VARCHAR(45) NULL,
-  PRIMARY KEY (`id`))
+  PRIMARY KEY (`id`));
 
 
 -- -----------------------------------------------------
@@ -20,19 +22,22 @@ DROP TABLE IF EXISTS `porta_potties` ;
 CREATE TABLE IF NOT EXISTS `porta_potties` (
   `id` INT NOT NULL AUTO_INCREMENT,
   `name` VARCHAR(45) NOT NULL,
-  `latitude` VARCHAR(100) NOT NULL,
-  `longitude` VARCHAR(100) NOT NULL,
+  `latitude` DECIMAL(10, 8) NOT NULL,
+  `longitude` DECIMAL(11, 8) NOT NULL,
   `description` TEXT NULL,
   `rating` INT NULL,
+  `isPrivate` TINYINT(1) NULL,
+  `isAccessible` TINYINT(1) NULL,
+  `hasWomensProducts` TINYINT(1) NULL,
   `createdBy` INT NOT NULL,
   `createdAt` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
-  INDEX `fk_potties_users_id_idx` (`createdBy` ASC) VISIBLE,
+  INDEX `fk_potties_users_id_idx` (`createdBy` ASC),
   CONSTRAINT `fk_potties_users_id`
     FOREIGN KEY (`createdBy`)
     REFERENCES `users` (`id`)
     ON DELETE CASCADE
-    ON UPDATE CASCADE)
+    ON UPDATE CASCADE);
 
 
 -- -----------------------------------------------------
@@ -47,9 +52,9 @@ CREATE TABLE IF NOT EXISTS `votes` (
   `userId` INT NOT NULL,
   `portaPottyId` INT NOT NULL,
   PRIMARY KEY (`id`),
-  INDEX `fk_votes_users_id_idx` (`userId` ASC) VISIBLE,
-  INDEX `fk_votes_porta_potties_id_idx` (`portaPottyId` ASC) VISIBLE,
-  UNIQUE INDEX `unique_vote` (`userId` ASC, `portaPottyId` ASC) VISIBLE,
+  INDEX `fk_votes_users_id_idx` (`userId` ASC),
+  INDEX `fk_votes_porta_potties_id_idx` (`portaPottyId` ASC),
+  UNIQUE INDEX `unique_vote` (`userId` ASC, `portaPottyId` ASC),
   CONSTRAINT `fk_upvotes_users_id`
     FOREIGN KEY (`userId`)
     REFERENCES `users` (`id`)
@@ -59,4 +64,7 @@ CREATE TABLE IF NOT EXISTS `votes` (
     FOREIGN KEY (`portaPottyId`)
     REFERENCES `porta_potties` (`id`)
     ON DELETE CASCADE
-    ON UPDATE CASCADE)
+    ON UPDATE CASCADE);
+
+
+SET FOREIGN_KEY_CHECKS = 1;
