@@ -59,9 +59,9 @@ node server.js
 
 ## 🗃️ Database Structure
 PortaLocator uses a MySQL database with the following tables:
-- `users`: Stores user information (id, username, email, password hash)
-- `locations`: Stores porta potty locations (id, user_id, latitude, longitude, description, status)
-- `votes`: Stores user votes on locations (id, user_id, location_id, vote_type)
+- `users`: Stores user information (id, username, password hash, fname, lname)
+- `porta_potties`: Stores porta potty information (id, name, latitude, longitude, description, rating, isPrivate, isAccessible, hasWomensProducts, createdBy, createdAt)
+- `votes`: Stores user votes on porta potties (id, voteType, createdAt, userId, portaPottyId)
 
 <!-- ## API Endpoints
 
