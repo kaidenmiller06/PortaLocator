@@ -34,7 +34,7 @@ cd yourrepository
 npm install
 ```
 
-4. Set up environment variables in a `.env` file for Python backend:
+4. Set up environment variables in a `.env` file for Node.js backend:
 ```plaintext
 DB_HOST=your_host
 DB_USER=your_user
