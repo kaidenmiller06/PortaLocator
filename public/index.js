@@ -1,4 +1,6 @@
 let map, infoWindow, tempMarkers = [], selectedLatLng = null, curPanel = null;
+let originalPortaPotty = {};
+const portaPottyMarkers = new Map();
 const miniMaps = {};
 
 // -----------------------------------------------------
@@ -54,7 +56,7 @@ async function initMap() {
   // Single click on map to open sidebar for creating new porta potty
   map.addListener("click", (e) => {
     clearTempMarkers();
-    updateStars(0);
+    updateStars(stars, 0);
     openPanel('create', { latLng: e.latLng, map });
   });
 }
@@ -153,6 +155,14 @@ loadGoogleMapsScript().catch((error) => {
  * @returns {google.maps.marker.AdvancedMarkerElement} The created marker.
  */
 function createMarker(portaPotty) {  
+  const markerId = Number(portaPotty.id);
+
+  // Replace any existing marker for the same porta potty id.
+  if (portaPottyMarkers.has(markerId)) {
+    portaPottyMarkers.get(markerId).map = null;
+    portaPottyMarkers.delete(markerId);
+  }
+
   const lat = parseFloat(portaPotty.latitude);
   const lng = parseFloat(portaPotty.longitude);
 
@@ -163,6 +173,7 @@ function createMarker(portaPotty) {
   });
 
   marker.portaPottyData = portaPotty;
+  portaPottyMarkers.set(markerId, marker);
 
   // Add click listener for viewing/editing
   marker.addEventListener('gmp-click', () => {
@@ -171,6 +182,18 @@ function createMarker(portaPotty) {
   });
   
   return marker;
+}
+
+
+/**
+ * Deletes a marker for a given porta potty ID.
+ * @param {number} portaPottyId - The ID of the porta potty for which to delete the marker.
+ */
+function deleteMarker(portaPottyId) {
+  if (portaPottyMarkers.has(portaPottyId)) {
+    portaPottyMarkers.get(portaPottyId).map = null;
+    portaPottyMarkers.delete(portaPottyId);
+  }
 }
 
 
@@ -210,20 +233,32 @@ function openPanel(type, data = {}) {
 
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
 
-  if (curPanel === type) {
+  if (curPanel === type && type !== 'view') {
     sidebar.classList.remove('open');
     curPanel = null;
     return;
   }
 
-  // Panel-specific setup before opening
+  // Helper: open sidebar, wait for 50 ms, then run callback
+  const afterSidebarOpen = (callback) => {
+    if (sidebar.classList.contains('open')) {
+      callback();
+    } else {
+      sidebar.classList.add('open');
+      setTimeout(callback, 50);
+    }
+  };
+
   if (type === 'create') {
     const { latLng, map } = data;
     clearTempMarkers();
     selectedLatLng = latLng;
     tempMarkers.push(new google.maps.marker.AdvancedMarkerElement({ position: latLng, map }));
-    map.panTo(latLng);
-    initMiniMap(latLng, 'miniMap-create');
+
+    afterSidebarOpen(() => {
+      map.panTo(latLng);
+      initMiniMap(latLng, 'miniMap-create');
+    });
   }
 
   if (type === 'view') {
@@ -235,23 +270,90 @@ function openPanel(type, data = {}) {
       lng: parseFloat(portaPotty.longitude)
     };
 
-    map.panTo(latLng);
-    initMiniMap(latLng, 'miniMap-view');
+    // Populate fields immediately
+    document.getElementById('view_porta_potty_name').textContent = portaPotty.name;
+    document.getElementById('view_porta_potty_description').textContent = portaPotty.description;
+    document.getElementById('view_porta_potty_rating').value = portaPotty.rating;
 
-    document.getElementById('view_porta_potty_name').value        = portaPotty.name;
-    document.getElementById('view_porta_potty_description').value = portaPotty.description;
-    document.getElementById('view_porta_potty_rating').value      = portaPotty.rating;
-    updateStars(portaPotty.rating);
-    document.getElementById('view_porta_potty_private').checked          = portaPotty.isPrivate === 1;
-    document.getElementById('view_porta_potty_accessible').checked       = portaPotty.isAccessible === 1;
-    document.getElementById('view_porta_potty_womens_products').checked  = portaPotty.hasWomensProducts === 1;
+    updateStars(viewStars, portaPotty.rating);
 
-    const canEdit = portaPotty.createdBy === 1;
-    document.getElementById('editPortaPottyBtn').style.display   = canEdit ? 'block' : 'none';
-    document.getElementById('deletePortaPottyBtn').style.display = canEdit ? 'block' : 'none';
+    const fields = [
+      { id: 'view_porta_potty_private_badge', value: portaPotty.isPrivate },
+      { id: 'view_porta_potty_accessible_badge', value: portaPotty.isAccessible },
+      { id: 'view_porta_potty_womens_products_badge', value: portaPotty.hasWomensProducts },
+    ];
+
+    fields.forEach(({ id, value }) => {
+      document.getElementById(id).classList.toggle('d-none', !value);
+    });
+
+    const canEdit = Number(portaPotty.createdBy) === 1;
+
+    const editBtn = document.getElementById('editPortaPottyBtn');
+    const deleteBtn = document.getElementById('deletePortaPottyBtn');
+
+    editBtn.style.display = canEdit ? 'block' : 'none';
+    deleteBtn.style.display = canEdit ? 'block' : 'none';
+
+    if (canEdit) {
+      editBtn.onclick = () => openPanel('edit', { portaPotty });
+      // TODO: implement delete functionality
+      deleteBtn.onclick = () => {
+        if (confirm('Are you sure you want to delete this porta potty?')) {
+          deletePortaPotty(portaPotty.id);
+        }
+      };
+    }
+
+    afterSidebarOpen(() => {
+      map.panTo(latLng);
+      initMiniMap(latLng, 'miniMap-view');
+    });
   }
 
-  sidebar.classList.add('open');
+  if (type === 'edit') {
+    const { portaPotty } = data;
+    clearTempMarkers();
+
+    const latLng = {
+      lat: parseFloat(portaPotty.latitude),
+      lng: parseFloat(portaPotty.longitude)
+    };
+
+    selectedLatLng = latLng;
+
+    // Store original porta potty data for change detection
+    originalPortaPotty = {
+      name: portaPotty.name,
+      description: portaPotty.description,
+      rating: portaPotty.rating,
+      isPrivate: portaPotty.isPrivate,
+      isAccessible: portaPotty.isAccessible,
+      hasWomensProducts: portaPotty.hasWomensProducts,
+      latitude: portaPotty.latitude,
+      longitude: portaPotty.longitude,
+    };
+
+    // Populate fields immediately
+    document.getElementById('edit_porta_potty').value = portaPotty.id;
+    document.getElementById('edit_porta_potty_name').value = portaPotty.name;
+    document.getElementById('edit_porta_potty_description').value = portaPotty.description;
+    document.getElementById('edit_porta_potty_rating').value = portaPotty.rating;
+    updateStars(editStars, portaPotty.rating);
+    document.getElementById('edit_porta_potty_private').checked = portaPotty.isPrivate === 1;
+    document.getElementById('edit_porta_potty_accessible').checked = portaPotty.isAccessible === 1;
+    document.getElementById('edit_porta_potty_womens_products').checked = portaPotty.hasWomensProducts === 1;
+
+    afterSidebarOpen(() => {
+      map.panTo(latLng);
+      initMiniMap(latLng, 'miniMap-edit');
+    });
+  }
+
+  if (sidebar.classList.contains('open')) {
+    sidebar.classList.add('open');
+  }
+
   setTimeout(() => {
     document.getElementById('panel-' + type).classList.add('active');
   }, curPanel ? 0 : 10);
@@ -268,6 +370,7 @@ function closePanel() {
   document.getElementById('sidebar').classList.remove('open');
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
   curPanel = null;
+  clearTempMarkers();
 }
 
 document.querySelectorAll(".btn-close").forEach(btn => {
@@ -289,6 +392,7 @@ createPortaPottyForm.addEventListener('submit', async function (e) {
   e.preventDefault();
 
   const portaName = document.getElementById('porta_potty_name').value.trim();
+
   if (!portaName) {
     alert('Please enter a name for the porta potty.');
     return;
@@ -336,44 +440,158 @@ createPortaPottyForm.addEventListener('submit', async function (e) {
 });
 
 
+/**
+ * Handles form submission for editing a pre-existing porta potty.
+ * Validates input, sends data to backend, and updates the map with the new location.
+ */
+const editPortaPottyForm = document.getElementById('editPortaPottyForm');
+editPortaPottyForm.addEventListener('submit', async function (e) {
+  e.preventDefault();
+
+  // Validate changes before making API call
+  const current = {
+    name: document.getElementById('edit_porta_potty_name').value.trim(),
+    description: document.getElementById('edit_porta_potty_description').value,
+    rating: document.getElementById('edit_porta_potty_rating').value,
+    isPrivate: document.getElementById('edit_porta_potty_private').checked ? 1 : 0,
+    isAccessible: document.getElementById('edit_porta_potty_accessible').checked ? 1 : 0,
+    hasWomensProducts: document.getElementById('edit_porta_potty_womens_products').checked ? 1 : 0,
+    latitude: selectedLatLng.lat,
+    longitude: selectedLatLng.lng,
+  };
+
+  const hasChanged = Object.keys(current).some(key => current[key] != originalPortaPotty[key]);
+  if (!hasChanged) {
+    alert('No changes detected.');
+    return;
+  }
+
+  
+  const portaPottyId = document.getElementById('edit_porta_potty').value;
+  const portaName = document.getElementById('edit_porta_potty_name').value.trim();
+
+  if (!portaName) {
+    alert('Please enter a name for the porta potty.');
+    return;
+  }
+
+  const latitude = selectedLatLng.lat;
+  const longitude = selectedLatLng.lng;
+  const description = document.getElementById('edit_porta_potty_description').value;
+  const rating = document.getElementById('edit_porta_potty_rating').value;
+  const isPrivate = document.getElementById('edit_porta_potty_private').checked ? 1 : 0;
+  const isAccessible = document.getElementById('edit_porta_potty_accessible').checked ? 1 : 0;
+  const hasWomensProducts = document.getElementById('edit_porta_potty_womens_products').checked ? 1 : 0;
+
+  try {
+    const response = await fetch('http://localhost:3000/api/porta-potties/' + portaPottyId, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: portaName,
+        latitude,
+        longitude,
+        description,
+        rating,
+        isPrivate,
+        isAccessible,
+        hasWomensProducts
+      }),
+    });
+
+    if (response.ok) {
+      const updatedPortaPotty = await response.json();
+      const existingPortaPotty = portaPottyMarkers.get(Number(portaPottyId))?.portaPottyData || {};
+
+      // Keep ownership metadata if PUT response omits it.
+      createMarker({ ...existingPortaPotty, ...updatedPortaPotty });
+      clearTempMarkers();
+      closePanel();
+    } else {
+      alert('Failed to edit porta potty. Please try again.');
+    }
+  } catch (error) {
+    console.error('Error editing porta potty:', error);
+    alert('Network error. Please try again later.');
+  }
+});
+
+
+/**
+ * Deletes a porta potty by ID, removes the marker from the map, and closes the sidebar panel.
+ * @param {string} portaPottyId 
+ */
+async function deletePortaPotty(portaPottyId) {
+  try {
+    const response = await fetch('http://localhost:3000/api/porta-potties/' + portaPottyId, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+    });
+
+    if (response.ok) {
+      console.log('Deleted porta potty with ID:', portaPottyId);
+      deleteMarker(Number(portaPottyId));
+      closePanel();
+    } else {
+      alert('Failed to delete porta potty. Please try again.');
+    }
+  } catch (error) {
+    console.error('Error deleting porta potty:', error);
+    alert('Network error. Please try again later.');
+  }
+}
+
+
 
 // -----------------------------------------------------
 // Star Rating Logic
 // -----------------------------------------------------
 
 const stars = document.querySelectorAll('#star-rating .star');
-const ratingInput = document.getElementById('porta_potty_rating');
+const viewStars = document.querySelectorAll('#view-star-rating .star');
+const editStars = document.querySelectorAll('#edit-star-rating .star');
 
-
-stars.forEach(star => {
-  // Click to set rating
-  star.addEventListener('click', () => {
-    const value = parseInt(star.dataset.value);
-    ratingInput.value = value;
-    updateStars(value);
-  });
-
-  // Hover to preview
-  star.addEventListener('mouseover', () => {
-    updateStars(parseInt(star.dataset.value));
-  });
-
-  // Reset to selected on mouse out
-  star.addEventListener('mouseout', () => {
-    updateStars(parseInt(ratingInput.value));
-  });
+document.addEventListener('DOMContentLoaded', () => {
+  initStars(stars, 'porta_potty_rating');
+  initStars(viewStars, 'view_porta_potty_rating');
+  initStars(editStars, 'edit_porta_potty_rating');
 });
 
+/**
+ * Initializes the star rating functionality for a given container and input.
+ * @param {NodeList} stars - The list of star elements to initialize.
+ * @param {string} inputId - The ID of the hidden input field to update.
+ */
+function initStars(stars, inputId) {
+  const ratingInput = document.getElementById(inputId);
+
+  stars.forEach(star => {
+    star.addEventListener('click', () => {
+      const value = parseInt(star.dataset.value);
+      ratingInput.value = value;
+      updateStars(stars, value);
+    });
+
+    star.addEventListener('mouseover', () => {
+      updateStars(stars, parseInt(star.dataset.value));
+    });
+
+    star.addEventListener('mouseout', () => {
+      updateStars(stars, parseInt(ratingInput.value));
+    });
+  });
+}
 
 /**
  * Updates the star icons based on the current rating value.
  * Stars with a value less than or equal to the rating are filled, while others are empty.
+ * @param {NodeList} stars - The list of star elements to update.
  * @param {number} rating - The current rating value to display.
  */
-function updateStars(rating) {
+function updateStars(stars, rating) {
   stars.forEach(star => {
     const val = parseInt(star.dataset.value);
-    star.classList.toggle('bi-star-fill', val <= rating); // filled
-    star.classList.toggle('bi-star', val > rating);       // empty
+    star.classList.toggle('bi-star-fill', val <= rating);
+    star.classList.toggle('bi-star', val > rating);
   });
 }

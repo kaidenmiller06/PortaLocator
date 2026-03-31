@@ -1,4 +1,4 @@
-# 🚽 PortaLocator
+# PortaLocator
 
 A crowdsourced, community-verified map of porta potty locations built on the Google Maps JavaScript API.
 
@@ -7,8 +7,8 @@ A crowdsourced, community-verified map of porta potty locations built on the Goo
 - [Installation](#installation)
 - [Quick Start](#quick-start)
 - [Database Structure](#database-structure)
-<!-- - [API Endpoints](#api-endpoints)
-- [Future Development](#future-development) -->
+- [Future Development](#future-development)
+<!-- - [API Endpoints](#api-endpoints) -->
 
 ## 🌟 Features
 - 📍 **Submit locations** — Users can place a marker anywhere on the Google Maps-powered interface to report a porta potty
@@ -63,6 +63,10 @@ PortaLocator uses a MySQL database with the following tables:
 - `porta_potties`: Stores porta potty information (id, name, latitude, longitude, description, rating, isPrivate, isAccessible, hasWomensProducts, createdBy, createdAt)
 - `votes`: Stores user votes on porta potties (id, voteType, createdAt, userId, portaPottyId)
 
-<!-- ## API Endpoints
+<!-- ## API Endpoints -->
 
-## Future Development -->
+## ⌛ Future Development
+- User authentication and profiles
+- Upvote/downvote system for community verification
+- Moveable markers for easier editing
+- Strava route integration to show porta potties along  routes

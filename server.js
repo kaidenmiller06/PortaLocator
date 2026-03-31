@@ -81,6 +81,37 @@ app.post('/api/porta-potties', (req, res) => {
   );
 });
 
+// Edit porta potty
+app.put('/api/porta-potties/:id', (req, res) => {
+  const { id } = req.params;
+  const { name, latitude, longitude, description, rating, isPrivate, isAccessible, hasWomensProducts } = req.body;
+
+  if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
+    return res.status(400).json({ error: 'Invalid coordinates' });
+  }
+
+  db.query(
+    'UPDATE porta_potties SET name=?, latitude=?, longitude=?, description=?, rating=?, isPrivate=?, isAccessible=?, hasWomensProducts=? WHERE id=?',
+    [name, latitude, longitude, description, rating, isPrivate, isAccessible, hasWomensProducts, id],
+    (err, result) => {
+      if (err) return res.status(500).json({ error: err.message });
+      if (result.affectedRows === 0) return res.status(404).json({ error: 'Not found' });
+      res.json({ id, name, latitude, longitude, description, rating, isPrivate, isAccessible, hasWomensProducts });
+    }
+  );
+});
+
+// Delete porta potty
+app.delete('/api/porta-potties/:id', (req, res) => {
+  const { id } = req.params;
+
+  db.query('DELETE FROM porta_potties WHERE id=?', [id], (err, result) => {
+    if (err) return res.status(500).json({ error: err.message });
+    if (result.affectedRows === 0) return res.status(404).json({ error: 'Not found' });
+    res.json({ message: 'Porta potty deleted successfully' });
+  });
+});
+
 // Listen for requests
 app.listen(3000, () => console.log(`Server running on port 3000`));
 
