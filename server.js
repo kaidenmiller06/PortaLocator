@@ -3,14 +3,18 @@
 // -----------------------------------------------------
 
 const express = require('express');
+const { WorkOS } = require('@workos-inc/node');
+const session = require('express-session');
 const mysql = require('mysql2');
-const dotenv = require('dotenv');
 const cors = require('cors');
-
-dotenv.config();
+const path = require('path');
+require('dotenv').config();
 
 const app = express();
-app.use(cors());
+app.use(cors({
+  origin: 'http://127.0.0.1:3000',
+  credentials: true,
+}));
 app.use(express.json());
 
 const db = mysql.createConnection({
@@ -25,9 +29,19 @@ db.connect((err) => {
   console.log('Connected to database');
 });
 
+const workos = new WorkOS(process.env.WORKOS_API_KEY);
+const clientId = process.env.WORKOS_CLIENT_ID;
+
+app.use(session({
+  secret: process.env.SESSION_SECRET,
+  resave: false,
+  saveUninitialized: false,
+}));
+
+
 
 // -----------------------------------------------------
-// API Endpoints
+// Google Maps API route
 // -----------------------------------------------------
 
 // Runtime config for browser-safe values.
@@ -43,6 +57,90 @@ app.get('/api/config/maps-key', (req, res) => {
   res.json({ key: mapsApiKey });
 });
 
+
+
+// -----------------------------------------------------
+// WorkOS API route
+// -----------------------------------------------------
+
+// Protect routes
+function requireAuth(req, res, next) {
+  if (!req.session.user) return res.redirect('/auth');
+  next();
+}
+
+
+// Public - Home route
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+
+// Protected - App route (auth required)
+app.get('/app', requireAuth, (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'app.html'));
+});
+
+
+// WorkOS SSO route
+app.get('/auth', (req, res) => {
+  const authorizationUrl = workos.userManagement.getAuthorizationUrl({
+    clientId,
+    redirectUri: 'http://127.0.0.1:3000/callback',
+    provider: 'authkit',
+    prompt: 'login',
+  });
+  res.redirect(authorizationUrl);
+});
+
+
+// Callback
+app.get('/callback', async (req, res) => {
+  const { code, error, error_description } = req.query;
+
+  if (error) return res.status(401).send(error_description);
+
+  try {
+    const { user } = await workos.userManagement.authenticateWithCode({
+      clientId,
+      code,
+    });
+
+    db.query(
+      'INSERT INTO users (id) VALUES (?) ON DUPLICATE KEY UPDATE id=id',
+      [user.id]
+    );
+
+    req.session.user = user;
+    res.redirect('/app');
+  } catch (err) {
+    res.status(500).send(err.message);
+  }
+});
+
+
+// Get current user
+app.get('/api/me', requireAuth, (req, res) => {
+  res.json(req.session.user);
+});
+
+
+// Logout
+app.get('/logout', (req, res) => {
+  req.session.destroy();
+  res.redirect('/');
+});
+
+
+// Static files
+app.use(express.static(path.join(__dirname, 'public'), { index: false }));
+
+
+
+// -----------------------------------------------------
+// Porta Potty API route
+// -----------------------------------------------------
+
 // Fetch porta potties
 app.get('/api/porta-potties', (req, res) => {
   db.query('SELECT * FROM porta_potties', (err, results) => {
@@ -50,6 +148,7 @@ app.get('/api/porta-potties', (req, res) => {
     res.json(results);
   });
 });
+
 
 // Create porta potty
 app.post('/api/porta-potties', (req, res) => {
@@ -81,6 +180,7 @@ app.post('/api/porta-potties', (req, res) => {
   );
 });
 
+
 // Edit porta potty
 app.put('/api/porta-potties/:id', (req, res) => {
   const { id } = req.params;
@@ -101,6 +201,7 @@ app.put('/api/porta-potties/:id', (req, res) => {
   );
 });
 
+
 // Delete porta potty
 app.delete('/api/porta-potties/:id', (req, res) => {
   const { id } = req.params;
@@ -112,7 +213,6 @@ app.delete('/api/porta-potties/:id', (req, res) => {
   });
 });
 
+
 // Listen for requests
 app.listen(3000, () => console.log(`Server running on port 3000`));
-
-// 1. Auth0, 2. WorkOS, 3. OAuth

@@ -3,12 +3,12 @@
 A crowdsourced, community-verified map of porta potty locations built on the Google Maps JavaScript API.
 
 ## 📚 Table of Contents
-- [Features](#features)
-- [Installation](#installation)
-- [Quick Start](#quick-start)
-- [Database Structure](#database-structure)
-- [Future Development](#future-development)
-<!-- - [API Endpoints](#api-endpoints) -->
+- [Features](#-features)
+- [Installation](#-installation)
+- [Quick Start](#-quick-start)
+- [Database Structure](#-database-structure)
+- [Future Development](#-future-development)
+<!-- - [API Endpoints](#-api-endpoints) -->
 
 ## 🌟 Features
 - 📍 **Submit locations** — Users can place a marker anywhere on the Google Maps-powered interface to report a porta potty
@@ -34,19 +34,28 @@ cd yourrepository
 npm install
 ```
 
-4. Set up environment variables in a `.env` file for Node.js backend:
+4. Set up environment variables — create a `.env` file in your project root:
 ```plaintext
 DB_HOST=your_host
 DB_USER=your_user
 DB_PASSWORD=your_password
 DB_NAME=your_db_name
-DB_PORT=your_port
 GOOGLE_MAPS_API_KEY=your_google_maps_api_key
+WORKOS_API_KEY=your_workos_api_key
+WORKOS_CLIENT_ID=your_workos_client_id
+SESSION_SECRET=your_session_secret
 ```
 
-5. Turn on XAMPP's MySQL and initialize the database:
+5. Generate a strong session secret:
 ```bash
-mysql -u root -p your_db_name < createTables.sql
+npm run gen:session
+```
+
+> 💡 Copy the output and set it as `SESSION_SECRET=<generated_value>` in your `.env` file.
+
+6. Turn on XAMPP's MySQL and initialize the database:
+```bash
+npm run db:init
 ```
 
 ## 🚀 Quick Start
@@ -54,19 +63,19 @@ mysql -u root -p your_db_name < createTables.sql
 
 2. Start the backend server:
 ```bash
-node server.js
+npm start
 ```
 
 ## 🗃️ Database Structure
 PortaLocator uses a MySQL database with the following tables:
-- `users`: Stores user information (id, username, password hash, fname, lname)
+- `users`: Stores WorkOS user information (id, createdAt)
 - `porta_potties`: Stores porta potty information (id, name, latitude, longitude, description, rating, isPrivate, isAccessible, hasWomensProducts, createdBy, createdAt)
 - `votes`: Stores user votes on porta potties (id, voteType, createdAt, userId, portaPottyId)
 
 <!-- ## API Endpoints -->
 
 ## ⌛ Future Development
-- User authentication and profiles
+- Profiles and login pages
 - Upvote/downvote system for community verification
 - Moveable markers for easier editing
-- Strava route integration to show porta potties along  routes
+- Strava route integration to show porta potties along routes

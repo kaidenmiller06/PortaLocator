@@ -3,6 +3,28 @@ let originalPortaPotty = {};
 const portaPottyMarkers = new Map();
 const miniMaps = {};
 
+
+
+// -----------------------------------------------------
+// User Authentication State
+// -----------------------------------------------------
+
+let currentUser = null;
+
+/**
+ * Fetches the current authenticated user from the backend API and stores it in the `currentUser` variable.
+ */
+async function loadCurrentUser() {
+  const res = await fetch('/api/me');
+  if (res.ok) {
+    currentUser = await res.json();
+  }
+}
+
+loadCurrentUser();
+
+
+
 // -----------------------------------------------------
 // Google Maps Initialization
 // -----------------------------------------------------
@@ -29,7 +51,6 @@ async function initMap() {
   infoWindow = new google.maps.InfoWindow();
 
   // Automatically try to get location on load
-  // TODO: add a check for access to user location
   if (navigator.geolocation) {
     navigator.geolocation.getCurrentPosition(
       (position) => {
@@ -56,7 +77,7 @@ async function initMap() {
   // Single click on map to open sidebar for creating new porta potty
   map.addListener("click", (e) => {
     clearTempMarkers();
-    updateStars(stars, 0);
+    clearFields();
     openPanel('create', { latLng: e.latLng, map });
   });
 }
@@ -115,11 +136,12 @@ function handleLocationError(browserHasGeolocation, infoWindow, pos) {
 }
 
 
-// Initialize the map after the page has loaded
-window.initMap = initMap;
-
+/**
+ * Fetches the Google Maps API key from the backend config endpoint and dynamically loads the Google Maps script with the key.
+ * @returns {Promise<void>}
+ */
 async function loadGoogleMapsScript() {
-  const response = await fetch('http://localhost:3000/api/config/maps-key');
+  const response = await fetch('/api/config/maps-key');
 
   if (!response.ok) {
     throw new Error('Failed to load Google Maps API key from server config endpoint.');
@@ -142,6 +164,9 @@ loadGoogleMapsScript().catch((error) => {
   console.error(error);
   alert('Unable to load Google Maps. Please try again later.');
 });
+
+// Initialize the map after the page has loaded
+window.initMap = initMap;
 
 
 
@@ -201,7 +226,7 @@ function deleteMarker(portaPottyId) {
  * Fetches all porta potties from the backend API and creates clickable markers for each on the map.
  */
 async function loadMarkers() {
-  const response = await fetch('http://localhost:3000/api/porta-potties');
+  const response = await fetch('/api/porta-potties');
   const portaPotties = await response.json();
   console.log('Fetched porta potties:', portaPotties);
   portaPotties.forEach(p => createMarker(p));
@@ -239,7 +264,9 @@ function openPanel(type, data = {}) {
     return;
   }
 
-  // Helper: open sidebar, wait for 50 ms, then run callback
+  /**
+   * Helper: open sidebar, wait for 50 ms, then run callback
+   */ 
   const afterSidebarOpen = (callback) => {
     if (sidebar.classList.contains('open')) {
       callback();
@@ -257,6 +284,7 @@ function openPanel(type, data = {}) {
 
     afterSidebarOpen(() => {
       map.panTo(latLng);
+      map.setZoom(18);
       initMiniMap(latLng, 'miniMap-create');
     });
   }
@@ -287,7 +315,10 @@ function openPanel(type, data = {}) {
       document.getElementById(id).classList.toggle('d-none', !value);
     });
 
-    const canEdit = Number(portaPotty.createdBy) === 1;
+    const allFalse = fields.every(({ value }) => !value);
+    document.getElementById('view_porta_potty_badges_header').classList.toggle('d-none', allFalse);
+
+    const canEdit = portaPotty.createdBy === currentUser.id;
 
     const editBtn = document.getElementById('editPortaPottyBtn');
     const deleteBtn = document.getElementById('deletePortaPottyBtn');
@@ -297,7 +328,6 @@ function openPanel(type, data = {}) {
 
     if (canEdit) {
       editBtn.onclick = () => openPanel('edit', { portaPotty });
-      // TODO: implement delete functionality
       deleteBtn.onclick = () => {
         if (confirm('Are you sure you want to delete this porta potty?')) {
           deletePortaPotty(portaPotty.id);
@@ -307,6 +337,7 @@ function openPanel(type, data = {}) {
 
     afterSidebarOpen(() => {
       map.panTo(latLng);
+      map.setZoom(18);
       initMiniMap(latLng, 'miniMap-view');
     });
   }
@@ -346,6 +377,7 @@ function openPanel(type, data = {}) {
 
     afterSidebarOpen(() => {
       map.panTo(latLng);
+      map.setZoom(18);
       initMiniMap(latLng, 'miniMap-edit');
     });
   }
@@ -378,9 +410,23 @@ document.querySelectorAll(".btn-close").forEach(btn => {
 });
 
 
+/**
+ * * Clears all input fields in the create panel and resets the star rating.
+ */
+function clearFields() {
+  document.getElementById('porta_potty_name').value = '';
+  document.getElementById('porta_potty_description').value = '';
+  document.getElementById('porta_potty_rating').value = '0';
+  updateStars(stars, 0);
+  document.getElementById('porta_potty_private').checked = false;
+  document.getElementById('porta_potty_accessible').checked = false;
+  document.getElementById('porta_potty_womens_products').checked = false;
+}
+
+
 
 // -----------------------------------------------------
-// API Calls
+// Porta Potty API Calls
 // -----------------------------------------------------
 
 /**
@@ -397,6 +443,15 @@ createPortaPottyForm.addEventListener('submit', async function (e) {
     alert('Please enter a name for the porta potty.');
     return;
   }
+
+  const meRes = await fetch('/api/me');
+  if (!meRes.ok) {
+    alert('You must be logged in to create a porta potty.');
+    window.location.href = '/';
+    return;
+  }
+  const user = await meRes.json();
+
   const latitude = selectedLatLng.lat();
   const longitude = selectedLatLng.lng();
   const description = document.getElementById('porta_potty_description').value;
@@ -404,11 +459,11 @@ createPortaPottyForm.addEventListener('submit', async function (e) {
   const isPrivate = document.getElementById('porta_potty_private').checked ? 1 : 0;
   const isAccessible = document.getElementById('porta_potty_accessible').checked ? 1 : 0;
   const hasWomensProducts = document.getElementById('porta_potty_womens_products').checked ? 1 : 0;
-  const createdBy = 1; // Placeholder user ID
+  const createdBy = user.id;
   const createdAt = new Date().toISOString().slice(0, 19).replace('T', ' ');
 
   try {
-    const response = await fetch('http://localhost:3000/api/porta-potties', {
+    const response = await fetch('/api/porta-potties', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -484,7 +539,7 @@ editPortaPottyForm.addEventListener('submit', async function (e) {
   const hasWomensProducts = document.getElementById('edit_porta_potty_womens_products').checked ? 1 : 0;
 
   try {
-    const response = await fetch('http://localhost:3000/api/porta-potties/' + portaPottyId, {
+    const response = await fetch('/api/porta-potties/' + portaPottyId, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -523,7 +578,7 @@ editPortaPottyForm.addEventListener('submit', async function (e) {
  */
 async function deletePortaPotty(portaPottyId) {
   try {
-    const response = await fetch('http://localhost:3000/api/porta-potties/' + portaPottyId, {
+    const response = await fetch('/api/porta-potties/' + portaPottyId, {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
     });

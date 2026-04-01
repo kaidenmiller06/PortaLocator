@@ -4,7 +4,9 @@
   "description": "Porta Potty Locator",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "gen:session": "node -e \"console.log(require('crypto').randomBytes(32).toString('hex'))\"",
+    "db:init": "node db/init.js",
+    "start": "node server.js"
   },
   "repository": {
     "type": "git",
@@ -19,9 +21,11 @@
   },
   "homepage": "https://github.com/kaidenmiller06/PortaLocator#readme",
   "dependencies": {
+    "@workos-inc/node": "^8.10.0",
     "cors": "^2.8.6",
     "dotenv": "^17.3.1",
     "express": "^5.2.1",
+    "express-session": "^1.19.0",
     "mysql2": "^3.19.1"
   }
 }
