@@ -10,6 +10,7 @@ DROP TABLE IF EXISTS `users`;
 CREATE TABLE IF NOT EXISTS `users` (
   `id` VARCHAR(64) NOT NULL,  -- WorkOS user.id (e.g. "user_01ABC...")
   `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  `theme` VARCHAR(10) DEFAULT 'light',
   PRIMARY KEY (`id`)
 );
 

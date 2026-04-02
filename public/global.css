@@ -1,3 +1,4 @@
+/* Sidebar Styles */
 .sidebar {
   width: 0;
   overflow: hidden;
@@ -13,6 +14,8 @@
   width: 300px;
 }
 
+
+/* Panel Styles */
 .panel {
   position: absolute;
   inset: 0;
@@ -25,4 +28,34 @@
 
 .panel.active {
   transform: translateX(0);
+}
+
+
+/* Login Background Styles */
+.bg-image {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: -1;
+  opacity: 0.5;
+}
+
+
+/* Theme-dependent Button Styles */
+[data-bs-theme="dark"] .theme-btn {
+  --bs-btn-bg: #212529;
+  --bs-btn-border-color: #495057;
+  --bs-btn-color: white;
+  --bs-btn-hover-bg: #343a40;
+  --bs-btn-hover-border-color: #6c757d;
+  --bs-btn-hover-color: white;
+}
+
+
+/* Google Maps Info Window Styles */
+[data-bs-theme="dark"] .gm-style .gm-style-iw-c button {
+  filter: invert(1);
 }

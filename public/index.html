@@ -1,10 +1,43 @@
 <html>
   <head>
     <title>PortaLocator</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" type="text/css" href="./global.css" />
   </head>
 
   <body>
-    <h1>Welcome to PortaLocator</h1>
-    <a href="/auth">Login</a>
+    <img src="/assets/background.png" class="bg-image" alt="">
+    <main class="d-flex justify-content-center align-items-center min-vh-100">
+      <div class="centered-container card" style="max-width: 600px; width: 100%;">
+        <div class="card-header">
+          <h1 class="card-title">PortaLocator</h1>
+        </div>
+        <div class="card-body">
+          <p class="card-text">A crowdsourced, community-verified map of porta potty locations built on the Google Maps JavaScript API.</p>          
+        </div>
+        <ul class="list-group list-group-flush">
+          <li class="list-group-item">
+            <strong><i class="bi bi-geo-alt-fill"></i> Submit locations</strong> — Users can place a marker anywhere on the Google Maps-powered interface to report a porta potty
+          </li>
+          <li class="list-group-item">
+            <strong><i class="bi bi-person-fill-check"></i> Community verification</strong> — Other users can upvote or flag submissions to confirm accuracy
+          </li>
+          <li class="list-group-item">
+            <strong><i class="bi bi-globe2"></i> Global coverage</strong> — No boundaries; if it exists somewhere in the world, it can be mapped
+          </li>
+          <li class="list-group-item">
+            <strong><i class="bi bi-map-fill"></i> Live map</strong> — Browse verified and pending locations in real time
+          </li>
+          <li class="list-group-item">
+            <strong><i class="bi bi-github"></i> Learn more</strong> — <a href="https://github.com/kaidenmiller06/PortaLocator" target="_blank">https://github.com/kaidenmiller06/PortaLocator</a>
+          </li>
+        </ul>
+        <div class="card-body">
+          <button class="btn btn-primary w-100" onclick="window.location.href='/auth'">Login</button>
+        </div>
+      </div>
+    </main>
   </body>
 </html>

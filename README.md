@@ -75,7 +75,6 @@ PortaLocator uses a MySQL database with the following tables:
 <!-- ## API Endpoints -->
 
 ## ⌛ Future Development
-- Profiles and login pages
 - Upvote/downvote system for community verification
 - Moveable markers for easier editing
 - Strava route integration to show porta potties along routes

@@ -15,13 +15,31 @@ let currentUser = null;
  * Fetches the current authenticated user from the backend API and stores it in the `currentUser` variable.
  */
 async function loadCurrentUser() {
-  const res = await fetch('/api/me');
-  if (res.ok) {
-    currentUser = await res.json();
+  const [userRes, countRes, votesRes] = await Promise.all([
+    fetch('/api/me'),
+    fetch('/api/porta-potties/count'),
+    fetch('/api/votes/count')
+  ]);
+
+  if (userRes.ok) {
+    const [user, countData, votesData] = await Promise.all([
+      userRes.json(),
+      countRes.ok ? countRes.json() : Promise.resolve(null),
+      votesRes.ok ? votesRes.json() : Promise.resolve(null)
+    ]);
+
+    currentUser = {
+      ...user,
+      portaPottyCount: countData?.[0]?.count ?? 0,
+      voteCount: votesData?.[0]?.count ?? 0
+    };
   }
 }
 
-loadCurrentUser();
+document.addEventListener('DOMContentLoaded', async () => {
+  await loadCurrentUser();
+  updateProfileUI();
+});
 
 
 
@@ -34,11 +52,12 @@ loadCurrentUser();
  * If geolocation is denied or unavailable, it defaults to a center of the US.
  * Clicking on the map opens a sidebar for creating a new porta potty at the clicked location.
  */
-async function initMap() {
+async function initMap(theme = 'light') {
   const { Map } = await google.maps.importLibrary("maps");
   const { AdvancedMarkerElement, PinElement } = await google.maps.importLibrary(
     "marker",
   );
+  const { ColorScheme } = await google.maps.importLibrary("core")
   
   // Start with a default center in case location is denied
   map = new google.maps.Map(document.getElementById("map"), {
@@ -47,6 +66,9 @@ async function initMap() {
     mapId: "porta-potty-map",
     mapTypeId: "roadmap",
     disableDefaultUI: true,
+    colorScheme: theme === 'dark' 
+      ? ColorScheme.DARK 
+      : ColorScheme.LIGHT,
   });
   infoWindow = new google.maps.InfoWindow();
 
@@ -61,7 +83,7 @@ async function initMap() {
         map.setCenter(pos);
         map.setZoom(18);
         infoWindow.setPosition(pos);
-        infoWindow.setContent("You are here.");
+        infoWindow.setContent('<div style="color: #000000;">You are here.</div>');
         infoWindow.open(map);
       },
       () => {
@@ -137,36 +159,49 @@ function handleLocationError(browserHasGeolocation, infoWindow, pos) {
 
 
 /**
- * Fetches the Google Maps API key from the backend config endpoint and dynamically loads the Google Maps script with the key.
+ * Initializes the application by fetching the Google Maps API key and user theme
+ * in parallel, applying the theme, dynamically loading the Maps script, and
+ * initializing the map once the API is ready.
  * @returns {Promise<void>}
  */
-async function loadGoogleMapsScript() {
-  const response = await fetch('/api/config/maps-key');
+async function init() {
+  const [configRes, themeRes] = await Promise.all([
+    fetch('/api/config/maps-key'),
+    fetch('/api/user/theme')
+  ]);
 
-  if (!response.ok) {
-    throw new Error('Failed to load Google Maps API key from server config endpoint.');
-  }
+  const { key } = await configRes.json();
+  const { theme } = await themeRes.json();
 
-  const { key } = await response.json();
+  document.body.setAttribute('data-bs-theme', theme);
 
-  if (!key) {
-    throw new Error('Google Maps API key was not provided by server.');
-  }
+  if (!key) throw new Error('Google Maps API key was not provided by server.');
 
   const script = document.createElement('script');
-  script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(key)}&callback=initMap&loading=async`;
+  script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(key)}&loading=async`;
   script.async = true;
   script.defer = true;
   document.head.appendChild(script);
+
+  // Poll until google.maps.importLibrary is available
+  await new Promise((resolve) => {
+    const interval = setInterval(() => {
+      if (window.google && google.maps && typeof google.maps.importLibrary === 'function') {
+        clearInterval(interval);
+        resolve();
+      }
+    }, 50);
+  });
+
+  await initMap(theme);
+
+  document.getElementById('themeBtn').addEventListener('click', toggleTheme);
 }
 
-loadGoogleMapsScript().catch((error) => {
+init().catch((error) => {
   console.error(error);
   alert('Unable to load Google Maps. Please try again later.');
 });
-
-// Initialize the map after the page has loaded
-window.initMap = initMap;
 
 
 
@@ -276,6 +311,7 @@ function openPanel(type, data = {}) {
     }
   };
 
+  // Open create panel with map click location
   if (type === 'create') {
     const { latLng, map } = data;
     clearTempMarkers();
@@ -289,6 +325,7 @@ function openPanel(type, data = {}) {
     });
   }
 
+  // Open view panel with porta potty data
   if (type === 'view') {
     const { portaPotty } = data;
     clearTempMarkers();
@@ -318,6 +355,7 @@ function openPanel(type, data = {}) {
     const allFalse = fields.every(({ value }) => !value);
     document.getElementById('view_porta_potty_badges_header').classList.toggle('d-none', allFalse);
 
+    // Only show edit/delete buttons if current user is creator of the porta potty
     const canEdit = portaPotty.createdBy === currentUser.id;
 
     const editBtn = document.getElementById('editPortaPottyBtn');
@@ -342,6 +380,7 @@ function openPanel(type, data = {}) {
     });
   }
 
+  // Open edit panel with porta potty data
   if (type === 'edit') {
     const { portaPotty } = data;
     clearTempMarkers();
@@ -422,6 +461,53 @@ function clearFields() {
   document.getElementById('porta_potty_accessible').checked = false;
   document.getElementById('porta_potty_womens_products').checked = false;
 }
+
+
+
+// -----------------------------------------------------
+// Modal Management
+// -----------------------------------------------------
+
+/**
+ * Updates the user profile modal with the current user's information.
+ * Attempts to load profile photo image; otherwise, it keeps the default icon visible.
+ */
+function updateProfileUI() {
+  const img = document.getElementById('profile_picture');
+  const icon = document.getElementById('profile_picture_icon');
+  const name = document.getElementById('profile_name');
+  const email = document.getElementById('profile_email');
+  const createdAt = document.getElementById('profile_created_at');
+  const potties = document.getElementById('profile_porta_potties');
+  const votes = document.getElementById('profile_votes');
+
+  // Guard: only run if these elements exist on the current page
+  if (!name || !email || !potties || !votes || !createdAt) return;
+
+  name.textContent = currentUser?.firstName + ' ' + currentUser?.lastName ?? '';
+  email.textContent = currentUser?.email ?? '';
+  createdAt.textContent = currentUser?.createdAt ? new Date(currentUser.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long' }) : '';
+  potties.textContent = currentUser?.portaPottyCount ?? '0';
+  votes.textContent = currentUser?.voteCount ?? '0';
+
+  if (currentUser.profilePictureUrl) {
+    img.src = currentUser.profilePictureUrl;
+    img.onload = () => {
+      icon.classList.add('d-none');
+      img.classList.remove('d-none');
+    };
+    img.onerror = () => {
+      // URL failed to load, icon stays visible
+    };
+  }
+}
+
+
+// Send POST request to logout endpoint, then redirect to homepage
+document.getElementById('logoutBtn').addEventListener('click', async () => {
+  await fetch('/api/logout', { method: 'POST' });
+  window.location.href = '/';
+});
 
 
 
@@ -612,6 +698,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initStars(editStars, 'edit_porta_potty_rating');
 });
 
+
 /**
  * Initializes the star rating functionality for a given container and input.
  * @param {NodeList} stars - The list of star elements to initialize.
@@ -637,6 +724,7 @@ function initStars(stars, inputId) {
   });
 }
 
+
 /**
  * Updates the star icons based on the current rating value.
  * Stars with a value less than or equal to the rating are filled, while others are empty.
@@ -648,5 +736,32 @@ function updateStars(stars, rating) {
     const val = parseInt(star.dataset.value);
     star.classList.toggle('bi-star-fill', val <= rating);
     star.classList.toggle('bi-star', val > rating);
+  });
+}
+
+
+
+// -----------------------------------------------------
+// Theme Logic
+// -----------------------------------------------------
+
+/**
+ * Toggles the website theme between light and dark modes, updates the data attribute on the body, and persists the user's preference to the backend.
+ */
+async function toggleTheme() {
+  closePanel();
+
+  // Toggle the data attribute for immediate UI feedback
+  const current = document.body.getAttribute('data-bs-theme');
+  const next = current === 'dark' ? 'light' : 'dark';
+  document.body.setAttribute('data-bs-theme', next);
+
+  // Re-initialize the map with the new theme
+  await initMap(next);
+
+  await fetch('/api/user/theme', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ theme: next })
   });
 }

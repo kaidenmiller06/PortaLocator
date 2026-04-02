@@ -8,10 +8,30 @@
   </head>
 
   <body style="margin: 0; padding: 0; display: flex;">
+    <!-- Profile Button -->
+    <div style="position: fixed; top: 1rem; left: 1rem; z-index: 1000;">
+      <button class="btn btn-light border rounded-circle theme-btn"
+        data-bs-toggle="modal"
+        data-bs-target="#profileModal"
+        style="width: 45px; height: 45px; padding: 0;">
+        <i class="bi bi-person-fill"></i>
+      </button>
+    </div>
+
+    <!-- Theme Toggle Button -->
+    <div style="position: fixed; top: 1rem; left: 5rem; z-index: 1000;">
+      <button class="btn btn-light border rounded-circle theme-btn"
+        id="themeBtn"
+        style="width: 45px; height: 45px; padding: 0;">
+        <i class="bi bi-sun-fill" id="theme-icon"></i>
+      </button>
+    </div>
+
     <!-- Map -->
     <div id="map" style="flex: 1; height: 100vh; width: 100vw;"></div>
 
 
+    <!-- Sidebar -->
     <div class="sidebar border-start" id="sidebar">
 
 
@@ -108,21 +128,28 @@
         <div id="miniMap-view" style="width: 100%; height: 150px; border-radius: 8px;" class="mb-3"></div>
 
         <div class="form-fields d-flex flex-column flex-grow-1">
-          <!-- Name and Description -->
+          <!-- Description -->
           <div class="mb-3">
             <p class="form-control-plaintext" id="view_porta_potty_description">Description</p>
           </div>
 
           <!-- Rating -->
           <div class="mb-3">
-            <div id="view-star-rating" class="d-flex gap-1 fs-3" style="pointer-events: none;">
-              <i class="bi bi-star star" data-value="1" style="cursor:pointer; color: gold;"></i>
-              <i class="bi bi-star star" data-value="2" style="cursor:pointer; color: gold;"></i>
-              <i class="bi bi-star star" data-value="3" style="cursor:pointer; color: gold;"></i>
-              <i class="bi bi-star star" data-value="4" style="cursor:pointer; color: gold;"></i>
-              <i class="bi bi-star star" data-value="5" style="cursor:pointer; color: gold;"></i>
+            <div class="d-flex justify-content-between align-items-center">
+              <div id="view-star-rating" class="d-flex gap-1 fs-3" style="pointer-events: none;">
+                <i class="bi bi-star star" data-value="1" style="cursor:pointer; color: gold;"></i>
+                <i class="bi bi-star star" data-value="2" style="cursor:pointer; color: gold;"></i>
+                <i class="bi bi-star star" data-value="3" style="cursor:pointer; color: gold;"></i>
+                <i class="bi bi-star star" data-value="4" style="cursor:pointer; color: gold;"></i>
+                <i class="bi bi-star star" data-value="5" style="cursor:pointer; color: gold;"></i>
+              </div>
+              <input type="hidden" id="view_porta_potty_rating" value="0">
+              <div id="votes" class="d-flex gap-1 fs-3 align-items-center">
+                <i class="bi bi-arrow-up-square" id="upvoteBtn" style="cursor:pointer;"></i>
+                <p id="voteCount" class="m-0">0</p>
+                <i class="bi bi-arrow-down-square" id="downvoteBtn" style="cursor:pointer;"></i>
+              </div>
             </div>
-            <input type="hidden" id="view_porta_potty_rating" value="0">
           </div>
 
           <div id="view_porta_potty_badges_header" class="mb-2">
@@ -230,6 +257,39 @@
       </div>
 
 
+    </div>
+
+
+    <!-- Profile Modal -->
+    <div class="modal fade" id="profileModal" tabindex="-1" aria-labelledby="profileModalLabel" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="profileModalLabel">Profile</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <div class="d-flex align-items-center gap-3 mb-3">
+              <!-- Profile Picture -->
+              <div class="rounded-circle flex-shrink-0 d-flex align-items-center justify-content-center bg-secondary" id="profile_picture_container" style="width: 80px; height: 80px;">
+                <i class="bi bi-person-fill text-white" id="profile_picture_icon" style="font-size: 2.5rem;"></i>
+                <img id="profile_picture" alt="Profile Picture" class="rounded-circle d-none" style="width: 80px; height: 80px; object-fit: cover;">
+              </div>
+
+              <!-- Profile Info -->
+              <div>
+                <p class="mb-0"><strong>Name:</strong> <span id="profile_name"></span></p>
+                <p class="mb-0"><strong>Email:</strong> <span id="profile_email"></span></p>
+                <p class="mb-0 text-muted">Member since <span id="profile_created_at"></span></p>
+              </div>
+            </div>
+            <hr>
+            <p class="mb-1"><strong><i class="bi bi-geo-alt-fill"> </i>Porta Potties:</strong> <span id="profile_porta_potties"></span></p>
+            <p><strong><i class="bi bi-arrow-up-square-fill"> </i>Votes:</strong> <span id="profile_votes"></span></p>
+            <button class="btn btn-danger w-100" id="logoutBtn">Logout</button>
+          </div>
+        </div>
+      </div>
     </div>
 
 

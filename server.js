@@ -134,16 +134,28 @@ app.get('/logout', (req, res) => {
 
 // Static files
 app.use(express.static(path.join(__dirname, 'public'), { index: false }));
+app.use('/assets', express.static('assets'));
 
 
 
 // -----------------------------------------------------
-// Porta Potty API route
+// Porta Potty API routes
 // -----------------------------------------------------
 
 // Fetch porta potties
 app.get('/api/porta-potties', (req, res) => {
   db.query('SELECT * FROM porta_potties', (err, results) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(results);
+  });
+});
+
+
+// Fetch user porta potty count
+app.get('/api/porta-potties/count', (req, res) => {
+  if (!req.session.user) return res.status(401).json({ error: 'Not logged in' });
+
+  db.query('SELECT COUNT(*) as count FROM porta_potties WHERE createdBy=?', [req.session.user.id], (err, results) => {
     if (err) return res.status(500).json({ error: err.message });
     res.json(results);
   });
@@ -212,6 +224,99 @@ app.delete('/api/porta-potties/:id', (req, res) => {
     res.json({ message: 'Porta potty deleted successfully' });
   });
 });
+
+
+
+// -----------------------------------------------------
+// Porta Potty Vote API routes
+// -----------------------------------------------------
+
+// Fetch porta potty votes
+app.get('/api/votes', (req, res) => {
+  db.query('SELECT COUNT(*) as count FROM votes WHERE voteType=1', (err, results) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(results);
+  });
+});
+
+
+// Create porta potty vote
+app.post('/api/votes', (req, res) => {
+  const { voteType, createdAt, userId, portaPottyId } = req.body;
+
+  db.query(
+    'INSERT INTO votes (voteType, createdAt, userId, portaPottyId) VALUES (?, ?, ?, ?)',
+    [voteType, createdAt, userId, portaPottyId],
+    (err, result) => {
+      if (err) return res.status(500).json({ error: err.message });
+      res.json({ 
+        id: result.insertId,
+        voteType,
+        createdAt,
+        userId,
+        portaPottyId
+      });
+    }
+  );
+});
+
+
+// Edit porta potty vote
+app.put('/api/votes/:id', (req, res) => {
+  const { id } = req.params;
+  const { voteType } = req.body;
+
+  db.query(
+    'UPDATE votes SET voteType=? WHERE id=?',
+    [voteType, id],
+    (err, result) => {
+      if (err) return res.status(500).json({ error: err.message });
+      if (result.affectedRows === 0) return res.status(404).json({ error: 'Not found' });
+      res.json({ id, voteType });
+    }
+  );
+});
+
+
+// Fetch user porta potty vote count
+app.get('/api/votes/count', (req, res) => {
+  if (!req.session.user) return res.status(401).json({ error: 'Not logged in' });
+
+  db.query('SELECT COUNT(*) as count FROM votes WHERE userId=? AND voteType=1', [req.session.user.id], (err, results) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(results);
+  });
+});
+
+
+
+// -----------------------------------------------------
+// Theme API routes
+// -----------------------------------------------------
+
+// Fetch user theme
+app.get('/api/user/theme', (req, res) => {
+  if (!req.session.user) return res.status(401).json({ error: 'Not logged in' });
+
+  db.query('SELECT theme FROM users WHERE id=?', [req.session.user.id], (err, results) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(results[0]);
+  });
+});
+
+
+// Update user theme
+app.put('/api/user/theme', (req, res) => {
+  if (!req.session.user) return res.status(401).json({ error: 'Not logged in' });
+
+  const { theme } = req.body;
+
+  db.query('UPDATE users SET theme=? WHERE id=?', [theme, req.session.user.id], (err, results) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ message: 'Theme updated successfully' });
+  });
+});
+
 
 
 // Listen for requests
