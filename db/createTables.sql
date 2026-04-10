@@ -46,15 +46,15 @@ CREATE TABLE IF NOT EXISTS `porta_potties` (
 CREATE TABLE IF NOT EXISTS `votes` (
   `id` INT NOT NULL AUTO_INCREMENT,
   `voteType` TINYINT(1) NOT NULL,
-  `createdAt` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  `userId` VARCHAR(64) NOT NULL,  -- WorkOS user.id
   `portaPottyId` INT NOT NULL,
+  `createdBy` VARCHAR(64) NOT NULL,  -- WorkOS user.id
+  `createdAt` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
-  INDEX `fk_votes_users_id_idx` (`userId` ASC),
+  INDEX `fk_votes_users_id_idx` (`createdBy` ASC),
   INDEX `fk_votes_porta_potties_id_idx` (`portaPottyId` ASC),
-  UNIQUE INDEX `unique_vote` (`userId`, `portaPottyId`),
+  UNIQUE INDEX `unique_vote` (`createdBy`, `portaPottyId`),
   CONSTRAINT `fk_upvotes_users_id`
-    FOREIGN KEY (`userId`)
+    FOREIGN KEY (`createdBy`)
     REFERENCES `users` (`id`)
     ON DELETE CASCADE
     ON UPDATE CASCADE,

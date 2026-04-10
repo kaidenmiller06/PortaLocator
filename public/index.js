@@ -288,7 +288,7 @@ function clearTempMarkers() {
  * @param {Object} data - The data to populate the panel with.
  * @returns {void}
  */
-function openPanel(type, data = {}) {
+async function openPanel(type, data = {}) {
   const sidebar = document.getElementById('sidebar');
 
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
@@ -325,9 +325,15 @@ function openPanel(type, data = {}) {
     });
   }
 
+
   // Open view panel with porta potty data
   if (type === 'view') {
     const { portaPotty } = data;
+    const voteRes = await fetch(`/api/votes/${portaPotty.id}`);
+    const { upvoteCount, userVote } = await voteRes.json();
+    currentVote = userVote;
+    currentPortaPottyId = portaPotty.id;
+    
     clearTempMarkers();
 
     const latLng = {
@@ -342,6 +348,19 @@ function openPanel(type, data = {}) {
 
     updateStars(viewStars, portaPotty.rating);
 
+    // Populate vote count and button states
+    voteCount.textContent = upvoteCount;
+
+    upvoteBtn.className = 'bi bi-arrow-up-square';
+    downvoteBtn.className = 'bi bi-arrow-down-square';
+
+    if (userVote === 1) {
+      upvoteBtn.className = 'bi bi-arrow-up-square-fill';
+    } else if (userVote === 0) {
+      downvoteBtn.className = 'bi bi-arrow-down-square-fill';
+    }
+
+    // Show/hide badges based on porta potty attributes
     const fields = [
       { id: 'view_porta_potty_private_badge', value: portaPotty.isPrivate },
       { id: 'view_porta_potty_accessible_badge', value: portaPotty.isAccessible },
@@ -379,6 +398,7 @@ function openPanel(type, data = {}) {
       initMiniMap(latLng, 'miniMap-view');
     });
   }
+
 
   // Open edit panel with porta potty data
   if (type === 'edit') {
@@ -420,6 +440,7 @@ function openPanel(type, data = {}) {
       initMiniMap(latLng, 'miniMap-edit');
     });
   }
+
 
   if (sidebar.classList.contains('open')) {
     sidebar.classList.add('open');
@@ -679,6 +700,75 @@ async function deletePortaPotty(portaPottyId) {
   } catch (error) {
     console.error('Error deleting porta potty:', error);
     alert('Network error. Please try again later.');
+  }
+}
+
+
+
+// -----------------------------------------------------
+// Vote API Calls
+// -----------------------------------------------------
+
+const upvoteBtn = document.getElementById('upvoteBtn');
+const downvoteBtn = document.getElementById('downvoteBtn');
+const voteCount = document.getElementById('voteCount');
+
+let currentVote = null;
+let currentPortaPottyId = null;
+
+document.addEventListener('DOMContentLoaded', () => {
+  upvoteBtn.addEventListener('click', () => handleVote(1));
+  downvoteBtn.addEventListener('click', () => handleVote(0));
+});
+
+
+/**
+ * Handles the vote action for a porta potty.
+ * @param {number} voteType - 1 for upvote, 0 for downvote, null for no vote
+ */
+async function handleVote(voteType) {
+  const newVote = currentVote === voteType ? null : voteType;
+
+  if (newVote === null) {
+    // Delete existing vote
+    await fetch(`/api/votes/${currentPortaPottyId}`, { method: 'DELETE' });
+  } else if (currentVote === null) {
+    // Create user vote
+    await fetch('/api/votes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        voteType: newVote,
+        portaPottyId: currentPortaPottyId,
+        createdAt: new Date().toISOString().slice(0, 19).replace('T', ' ')
+      })
+    });
+  } else {
+    // Switching user vote
+    await fetch(`/api/votes/${currentPortaPottyId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ voteType: newVote })
+    });
+  }
+
+  currentVote = newVote;
+
+  // Refresh the count from the server to stay in sync
+  const voteRes = await fetch(`/api/votes/${currentPortaPottyId}`);
+  const { upvoteCount } = await voteRes.json();
+  voteCount.textContent = upvoteCount;
+
+  // UI updates based on new vote state
+  if (newVote === 1) {
+    upvoteBtn.className = 'bi bi-arrow-up-square-fill';
+    downvoteBtn.className = 'bi bi-arrow-down-square';
+  } else if (newVote === 0) {
+    upvoteBtn.className = 'bi bi-arrow-up-square';
+    downvoteBtn.className = 'bi bi-arrow-down-square-fill';
+  } else {
+    upvoteBtn.className = 'bi bi-arrow-up-square';
+    downvoteBtn.className = 'bi bi-arrow-down-square';
   }
 }
 

@@ -70,11 +70,11 @@ npm start
 PortaLocator uses a MySQL database with the following tables:
 - `users`: Stores WorkOS user information (id, createdAt)
 - `porta_potties`: Stores porta potty information (id, name, latitude, longitude, description, rating, isPrivate, isAccessible, hasWomensProducts, createdBy, createdAt)
-- `votes`: Stores user votes on porta potties (id, voteType, createdAt, userId, portaPottyId)
+- `votes`: Stores user votes on porta potties (id, voteType, portaPottyId, createdBy, createdAt)
 
 <!-- ## API Endpoints -->
 
 ## ⌛ Future Development
-- Upvote/downvote system for community verification
+- Signout button takes users to the WorkOS logout endpoint to properly end their session
 - Moveable markers for easier editing
 - Strava route integration to show porta potties along routes

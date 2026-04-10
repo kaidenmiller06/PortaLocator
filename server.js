@@ -231,30 +231,43 @@ app.delete('/api/porta-potties/:id', (req, res) => {
 // Porta Potty Vote API routes
 // -----------------------------------------------------
 
-// Fetch porta potty votes
-app.get('/api/votes', (req, res) => {
-  db.query('SELECT COUNT(*) as count FROM votes WHERE voteType=1', (err, results) => {
-    if (err) return res.status(500).json({ error: err.message });
-    res.json(results);
-  });
+// Fetch porta potty upvotes and user vote
+app.get('/api/votes/:portaPottyId', (req, res) => {
+  if (!req.session.user) return res.status(401).json({ error: 'Not logged in' });
+
+  const { portaPottyId } = req.params;
+
+  db.query(
+    `SELECT 
+      (SELECT COUNT(*) FROM votes WHERE portaPottyId=? AND voteType=1) AS upvoteCount,
+      (SELECT voteType FROM votes WHERE portaPottyId=? AND createdBy=?) AS userVote`,
+    [portaPottyId, portaPottyId, req.session.user.id],
+    (err, results) => {
+      if (err) return res.status(500).json({ error: err.message });
+      res.json({
+        upvoteCount: results[0].upvoteCount,
+        userVote: results[0].userVote ?? null  // 1, 0, or null
+      });
+    }
+  );
 });
 
 
 // Create porta potty vote
 app.post('/api/votes', (req, res) => {
-  const { voteType, createdAt, userId, portaPottyId } = req.body;
+  const { voteType, portaPottyId, createdBy, createdAt } = req.body;
 
   db.query(
-    'INSERT INTO votes (voteType, createdAt, userId, portaPottyId) VALUES (?, ?, ?, ?)',
-    [voteType, createdAt, userId, portaPottyId],
+    'INSERT INTO votes (voteType, portaPottyId, createdBy, createdAt) VALUES (?, ?, ?, ?)',
+    [voteType, portaPottyId, req.session.user.id, createdAt],
     (err, result) => {
       if (err) return res.status(500).json({ error: err.message });
       res.json({ 
         id: result.insertId,
         voteType,
-        createdAt,
-        userId,
-        portaPottyId
+        portaPottyId,
+        createdBy,
+        createdAt
       });
     }
   );
@@ -262,17 +275,37 @@ app.post('/api/votes', (req, res) => {
 
 
 // Edit porta potty vote
-app.put('/api/votes/:id', (req, res) => {
-  const { id } = req.params;
+app.put('/api/votes/:portaPottyId', (req, res) => {
+  if (!req.session.user) return res.status(401).json({ error: 'Not logged in' });
+
+  const { portaPottyId } = req.params;
   const { voteType } = req.body;
 
   db.query(
-    'UPDATE votes SET voteType=? WHERE id=?',
-    [voteType, id],
+    'UPDATE votes SET voteType=? WHERE createdBy=? AND portaPottyId=?',
+    [voteType, req.session.user.id, portaPottyId],
     (err, result) => {
       if (err) return res.status(500).json({ error: err.message });
       if (result.affectedRows === 0) return res.status(404).json({ error: 'Not found' });
-      res.json({ id, voteType });
+      res.json({ voteType, portaPottyId });
+    }
+  );
+});
+
+
+// Delete porta potty vote
+app.delete('/api/votes/:portaPottyId', (req, res) => {
+  if (!req.session.user) return res.status(401).json({ error: 'Not logged in' });
+
+  const { portaPottyId } = req.params;
+
+  db.query(
+    'DELETE FROM votes WHERE createdBy=? AND portaPottyId=?',
+    [req.session.user.id, portaPottyId],
+    (err, result) => {
+      if (err) return res.status(500).json({ error: err.message });
+      if (result.affectedRows === 0) return res.status(404).json({ error: 'Not found' });
+      res.json({ message: 'Vote deleted successfully' });
     }
   );
 });
@@ -282,7 +315,7 @@ app.put('/api/votes/:id', (req, res) => {
 app.get('/api/votes/count', (req, res) => {
   if (!req.session.user) return res.status(401).json({ error: 'Not logged in' });
 
-  db.query('SELECT COUNT(*) as count FROM votes WHERE userId=? AND voteType=1', [req.session.user.id], (err, results) => {
+  db.query('SELECT COUNT(*) as count FROM votes WHERE createdBy=? AND voteType=1', [req.session.user.id], (err, results) => {
     if (err) return res.status(500).json({ error: err.message });
     res.json(results);
   });
