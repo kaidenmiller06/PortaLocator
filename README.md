@@ -75,6 +75,8 @@ PortaLocator uses a MySQL database with the following tables:
 <!-- ## API Endpoints -->
 
 ## ⌛ Future Development
-- Signout button takes users to the WorkOS logout endpoint to properly end their session
+- Fix logo (change colors and export as PNG)
+- Upload photos of porta potties (Firebase)
+- User comments on porta potty objects
 - Moveable markers for easier editing
 - Strava route integration to show porta potties along routes

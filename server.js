@@ -101,7 +101,7 @@ app.get('/callback', async (req, res) => {
   if (error) return res.status(401).send(error_description);
 
   try {
-    const { user } = await workos.userManagement.authenticateWithCode({
+    const { user, accessToken } = await workos.userManagement.authenticateWithCode({
       clientId,
       code,
     });
@@ -112,6 +112,7 @@ app.get('/callback', async (req, res) => {
     );
 
     req.session.user = user;
+    req.session.accessToken = accessToken;
     res.redirect('/app');
   } catch (err) {
     res.status(500).send(err.message);
@@ -127,8 +128,22 @@ app.get('/api/me', requireAuth, (req, res) => {
 
 // Logout
 app.get('/logout', (req, res) => {
-  req.session.destroy();
-  res.redirect('/');
+  const accessToken = req.session.accessToken;
+
+  req.session.destroy((err) => {
+    if (err) console.error('Session destroy error:', err);
+    res.clearCookie('connect.sid');
+
+    if (accessToken) {
+      // Decode JWT payload (no verification needed, just extracting sid)
+      const payload = JSON.parse(Buffer.from(accessToken.split('.')[1], 'base64').toString());
+      
+      const logoutUrl = workos.userManagement.getLogoutUrl({ sessionId: payload.sid });
+      res.redirect(logoutUrl);
+    } else {
+      res.redirect('/');
+    }
+  });
 });
 
 
@@ -158,6 +173,17 @@ app.get('/api/porta-potties/count', (req, res) => {
   db.query('SELECT COUNT(*) as count FROM porta_potties WHERE createdBy=?', [req.session.user.id], (err, results) => {
     if (err) return res.status(500).json({ error: err.message });
     res.json(results);
+  });
+});
+
+
+// Fetch given porta potty
+app.get('/api/porta-potties/:id', (req, res) => {
+  const { id } = req.params;
+  db.query('SELECT * FROM porta_potties WHERE id=?', [id], (err, results) => {
+    if (err) return res.status(500).json({ error: err.message });
+    if (results.length === 0) return res.status(404).json({ error: 'Porta potty not found' });
+    res.json(results[0]);
   });
 });
 
@@ -230,6 +256,17 @@ app.delete('/api/porta-potties/:id', (req, res) => {
 // -----------------------------------------------------
 // Porta Potty Vote API routes
 // -----------------------------------------------------
+
+// Fetch user porta potty vote count
+app.get('/api/votes/count', (req, res) => {
+  if (!req.session.user) return res.status(401).json({ error: 'Not logged in' });
+
+  db.query('SELECT COUNT(*) as count FROM votes WHERE createdBy=? AND voteType=1', [req.session.user.id], (err, results) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(results);
+  });
+});
+
 
 // Fetch porta potty upvotes and user vote
 app.get('/api/votes/:portaPottyId', (req, res) => {
@@ -308,17 +345,6 @@ app.delete('/api/votes/:portaPottyId', (req, res) => {
       res.json({ message: 'Vote deleted successfully' });
     }
   );
-});
-
-
-// Fetch user porta potty vote count
-app.get('/api/votes/count', (req, res) => {
-  if (!req.session.user) return res.status(401).json({ error: 'Not logged in' });
-
-  db.query('SELECT COUNT(*) as count FROM votes WHERE createdBy=? AND voteType=1', [req.session.user.id], (err, results) => {
-    if (err) return res.status(500).json({ error: err.message });
-    res.json(results);
-  });
 });
 
 

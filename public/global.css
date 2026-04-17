@@ -1,3 +1,25 @@
+/* Global Styles */
+body,
+.btn,
+.form-control,
+.form-label,
+.card,
+.nav,
+.dropdown-item {
+  font-size: 14px;
+}
+
+h1 {
+  font-size: 32px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+h5 {
+  font-weight: 600;
+}
+
+
 /* Sidebar Styles */
 .sidebar {
   width: 0;
@@ -11,7 +33,7 @@
 }
 
 .sidebar.open {
-  width: 300px;
+  width: 400px;
 }
 
 
@@ -19,7 +41,7 @@
 .panel {
   position: absolute;
   inset: 0;
-  width: 300px;
+  width: 400px;
   transform: translateX(100%);
   transition: transform .3s cubic-bezier(.4,0,.2,1);
   overflow-y: auto;
@@ -40,7 +62,13 @@
   height: 100%;
   object-fit: cover;
   z-index: -1;
-  opacity: 0.5;
+}
+
+
+#editBackBtn {
+  --bs-btn-close-bg: url("/assets/box-arrow-left.svg");
+  background-image: var(--bs-btn-close-bg);
+  background-size: 1.1rem;
 }
 
 

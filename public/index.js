@@ -2,6 +2,8 @@ let map, infoWindow, tempMarkers = [], selectedLatLng = null, curPanel = null;
 let originalPortaPotty = {};
 const portaPottyMarkers = new Map();
 const miniMaps = {};
+let AdvancedMarkerElement;
+let PinElement;
 
 
 
@@ -36,9 +38,13 @@ async function loadCurrentUser() {
   }
 }
 
+// Load only current user id on initial page load
 document.addEventListener('DOMContentLoaded', async () => {
-  await loadCurrentUser();
-  updateProfileUI();
+  const res = await fetch('/api/me');
+  if (res.ok) {
+    const user = await res.json();
+    currentUser = { id: user.id };
+  }
 });
 
 
@@ -54,9 +60,11 @@ document.addEventListener('DOMContentLoaded', async () => {
  */
 async function initMap(theme = 'light') {
   const { Map } = await google.maps.importLibrary("maps");
-  const { AdvancedMarkerElement, PinElement } = await google.maps.importLibrary(
-    "marker",
-  );
+
+  const markerLib = await google.maps.importLibrary("marker");
+  AdvancedMarkerElement = markerLib.AdvancedMarkerElement;
+  PinElement = markerLib.PinElement;
+
   const { ColorScheme } = await google.maps.importLibrary("core")
   
   // Start with a default center in case location is denied
@@ -66,6 +74,7 @@ async function initMap(theme = 'light') {
     mapId: "porta-potty-map",
     mapTypeId: "roadmap",
     disableDefaultUI: true,
+    clickableIcons: false,
     colorScheme: theme === 'dark' 
       ? ColorScheme.DARK 
       : ColorScheme.LIGHT,
@@ -99,7 +108,9 @@ async function initMap(theme = 'light') {
   // Single click on map to open sidebar for creating new porta potty
   map.addListener("click", (e) => {
     clearTempMarkers();
-    clearFields();
+    if (curPanel !== 'create') {
+      clearFields();
+    }
     openPanel('create', { latLng: e.latLng, map });
   });
 }
@@ -133,7 +144,7 @@ function initMiniMap(latLng, containerId) {
     miniMaps[containerId].setZoom(16);
   }
 
-  const miniMarker = new google.maps.marker.AdvancedMarkerElement({
+  const miniMarker = new AdvancedMarkerElement({
     position: latLng,
     map: miniMaps[containerId],
   });
@@ -212,7 +223,7 @@ init().catch((error) => {
 /**
  * Creates a marker for a given porta potty object and adds a click listener for viewing/editing.
  * @param {Object} portaPotty - The porta potty object containing location data.
- * @returns {google.maps.marker.AdvancedMarkerElement} The created marker.
+ * @returns {AdvancedMarkerElement} The created marker.
  */
 function createMarker(portaPotty) {  
   const markerId = Number(portaPotty.id);
@@ -226,10 +237,22 @@ function createMarker(portaPotty) {
   const lat = parseFloat(portaPotty.latitude);
   const lng = parseFloat(portaPotty.longitude);
 
-  const marker = new google.maps.marker.AdvancedMarkerElement({
+  const img = document.createElement("img");
+  img.src = "/assets/logo.svg";
+  img.style.width = "16px";
+  img.style.height = "16px";
+
+  const pin = new PinElement({
+    glyph: img,
+    background: '#6f42c1',
+    borderColor: '#391e6c',
+  });
+
+  const marker = new AdvancedMarkerElement({
     position: { lat, lng },
     map: map,
     gmpClickable: true,
+    content: pin,
   });
 
   marker.portaPottyData = portaPotty;
@@ -293,7 +316,7 @@ async function openPanel(type, data = {}) {
 
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
 
-  if (curPanel === type && type !== 'view') {
+  if (curPanel === type && type === 'edit') {
     sidebar.classList.remove('open');
     curPanel = null;
     return;
@@ -311,12 +334,14 @@ async function openPanel(type, data = {}) {
     }
   };
 
+  // -----------------------------------------------------
   // Open create panel with map click location
+  // -----------------------------------------------------
   if (type === 'create') {
     const { latLng, map } = data;
     clearTempMarkers();
     selectedLatLng = latLng;
-    tempMarkers.push(new google.maps.marker.AdvancedMarkerElement({ position: latLng, map }));
+    tempMarkers.push(new AdvancedMarkerElement({ position: latLng, map }));
 
     afterSidebarOpen(() => {
       map.panTo(latLng);
@@ -326,7 +351,9 @@ async function openPanel(type, data = {}) {
   }
 
 
+  // -----------------------------------------------------
   // Open view panel with porta potty data
+  // -----------------------------------------------------
   if (type === 'view') {
     const { portaPotty } = data;
     const voteRes = await fetch(`/api/votes/${portaPotty.id}`);
@@ -344,6 +371,7 @@ async function openPanel(type, data = {}) {
     // Populate fields immediately
     document.getElementById('view_porta_potty_name').textContent = portaPotty.name;
     document.getElementById('view_porta_potty_description').textContent = portaPotty.description;
+    document.getElementById('view_porta_potty_description').parentElement.classList.toggle('d-none', !portaPotty.description);
     document.getElementById('view_porta_potty_rating').value = portaPotty.rating;
 
     updateStars(viewStars, portaPotty.rating);
@@ -351,13 +379,13 @@ async function openPanel(type, data = {}) {
     // Populate vote count and button states
     voteCount.textContent = upvoteCount;
 
-    upvoteBtn.className = 'bi bi-arrow-up-square';
-    downvoteBtn.className = 'bi bi-arrow-down-square';
+    upvoteBtn.className = 'bi bi-caret-up-square';
+    downvoteBtn.className = 'bi bi-caret-down-square';
 
     if (userVote === 1) {
-      upvoteBtn.className = 'bi bi-arrow-up-square-fill';
+      upvoteBtn.className = 'bi bi-caret-up-square-fill';
     } else if (userVote === 0) {
-      downvoteBtn.className = 'bi bi-arrow-down-square-fill';
+      downvoteBtn.className = 'bi bi-caret-down-square-fill';
     }
 
     // Show/hide badges based on porta potty attributes
@@ -400,7 +428,9 @@ async function openPanel(type, data = {}) {
   }
 
 
+  // -----------------------------------------------------
   // Open edit panel with porta potty data
+  // -----------------------------------------------------
   if (type === 'edit') {
     const { portaPotty } = data;
     clearTempMarkers();
@@ -465,8 +495,18 @@ function closePanel() {
   clearTempMarkers();
 }
 
-document.querySelectorAll(".btn-close").forEach(btn => {
-  btn.addEventListener("click", closePanel);
+
+// Add click listeners to all close buttons in panels
+document.querySelectorAll('[data-action="close-panel"]').forEach(btn => {
+  btn.addEventListener('click', closePanel);
+});
+
+
+// Back button for edit panel to return to view panel
+document.getElementById('editBackBtn').addEventListener('click', async () => {
+  const res = await fetch(`/api/porta-potties/${currentPortaPottyId}`);
+  const portaPotty = await res.json();
+  openPanel('view', { portaPotty });
 });
 
 
@@ -524,10 +564,22 @@ function updateProfileUI() {
 }
 
 
+// When profile button is clicked, load current user data and update the profile modal UI
+document.getElementById('profileBtn').addEventListener('click', async () => {
+  await loadCurrentUser();
+  updateProfileUI();
+});
+
+
+// Remove focus from modal when clicking off
+document.getElementById('profileModal').addEventListener('hide.bs.modal', () => {
+  document.activeElement.blur();
+});
+
+
 // Send POST request to logout endpoint, then redirect to homepage
-document.getElementById('logoutBtn').addEventListener('click', async () => {
-  await fetch('/api/logout', { method: 'POST' });
-  window.location.href = '/';
+document.getElementById('logoutBtn').addEventListener('click', () => {
+  window.location.href = '/logout';
 });
 
 
@@ -628,7 +680,7 @@ editPortaPottyForm.addEventListener('submit', async function (e) {
     return;
   }
 
-  
+  // Get porta potty ID and updated values from form
   const portaPottyId = document.getElementById('edit_porta_potty').value;
   const portaName = document.getElementById('edit_porta_potty_name').value.trim();
 
@@ -761,14 +813,14 @@ async function handleVote(voteType) {
 
   // UI updates based on new vote state
   if (newVote === 1) {
-    upvoteBtn.className = 'bi bi-arrow-up-square-fill';
-    downvoteBtn.className = 'bi bi-arrow-down-square';
+    upvoteBtn.className = 'bi bi-caret-up-square-fill';
+    downvoteBtn.className = 'bi bi-caret-down-square';
   } else if (newVote === 0) {
-    upvoteBtn.className = 'bi bi-arrow-up-square';
-    downvoteBtn.className = 'bi bi-arrow-down-square-fill';
+    upvoteBtn.className = 'bi bi-caret-up-square';
+    downvoteBtn.className = 'bi bi-caret-down-square-fill';
   } else {
-    upvoteBtn.className = 'bi bi-arrow-up-square';
-    downvoteBtn.className = 'bi bi-arrow-down-square';
+    upvoteBtn.className = 'bi bi-caret-up-square';
+    downvoteBtn.className = 'bi bi-caret-down-square';
   }
 }
 
