@@ -7,7 +7,7 @@
 ![Bootstrap](https://img.shields.io/badge/Bootstrap-7952B3?style=for-the-badge&logo=bootstrap&logoColor=white)
 
 <h1>
-  <img src="assets/logo.svg" width="50" style="vertical-align: middle; margin-bottom: 10px;" />
+  <img src="assets/logo.svg" width="30" />
   PortaLocator
 </h1>
 
