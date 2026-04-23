@@ -1,3 +1,11 @@
+![Node.js](https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)
+![Express](https://img.shields.io/badge/Express-000000?style=for-the-badge&logo=express&logoColor=white)
+![MySQL](https://img.shields.io/badge/MySQL-4479A1?style=for-the-badge&logo=mysql&logoColor=white)
+![WorkOS](https://img.shields.io/badge/WorkOS-000000?style=for-the-badge&logo=workos&logoColor=white)
+![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black)
+![Google Maps API](https://img.shields.io/badge/Google_Maps_API-4285F4?style=for-the-badge&logo=googlemaps&logoColor=white)
+![Bootstrap](https://img.shields.io/badge/Bootstrap-7952B3?style=for-the-badge&logo=bootstrap&logoColor=white)
+
 # PortaLocator
 
 A crowdsourced, community-verified map of porta potty locations built on the Google Maps JavaScript API.
@@ -6,9 +14,10 @@ A crowdsourced, community-verified map of porta potty locations built on the Goo
 - [Features](#-features)
 - [Installation](#-installation)
 - [Quick Start](#-quick-start)
+- [Routes](#-routes)
 - [Database Structure](#-database-structure)
+- [API Endpoints](#-api-endpoints)
 - [Future Development](#-future-development)
-<!-- - [API Endpoints](#-api-endpoints) -->
 
 ## 🌟 Features
 - 📍 **Submit locations** — Users can place a marker anywhere on the Google Maps-powered interface to report a porta potty
@@ -65,17 +74,65 @@ npm run db:init
 ```bash
 npm start
 ```
+3. Open your browser and navigate to `http://127.0.0.1:3000/` to access the landing page
+
+## 🔀 Routes
+### 💻 Pages
+| Method | Route | Description | Auth Required |
+|--------|-------|-------------|---------------|
+| GET | / | Landing page | No |
+| GET | /app | Main map application | Yes |
+
+### 🛡️ Auth (WorkOS AuthKit)
+| Method | Route | Description |
+|--------|-------|-------------|
+| GET | /auth | Redirects to WorkOS login |
+| GET | /callback | WorkOS OAuth callback, creates session |
+| Get | /logout | Destroys session, redirects to WorkOS logout |
 
 ## 🗃️ Database Structure
 PortaLocator uses a MySQL database with the following tables:
-- `users`: Stores WorkOS user information (id, createdAt)
+- `users`: Stores WorkOS user information (id) and other metadata (createdAt, theme)
 - `porta_potties`: Stores porta potty information (id, name, latitude, longitude, description, rating, isPrivate, isAccessible, hasWomensProducts, createdBy, createdAt)
 - `votes`: Stores user votes on porta potties (id, voteType, portaPottyId, createdBy, createdAt)
 
-<!-- ## API Endpoints -->
+## 🌐 API Endpoints
+### 🗺️ Google Maps
+| Method | Route | Description |
+|--------|-------|-------------|
+| GET | /api/config/maps-key | Fetch Google Maps API key |
+
+### 👤 User
+| Method | Route | Description |
+|--------|-------|-------------|
+| GET | /api/me | Get current authenticated user |
+
+### 🚽 Porta Potties
+| Method | Route | Description |
+|--------|-------|-------------|
+| GET | /api/porta-potties | Fetch all porta potties |
+| GET | /api/porta-potties/count | Get total count of user porta potties |
+| GET | /api/porta-potties/:id | Fetch a single porta potty by ID |
+| POST | /api/porta-potties | Create a new porta potty |
+| PUT | /api/porta-potties/:id | Update a porta potty |
+| DELETE | /api/porta-potties/:id | Delete a porta potty |
+
+### 🗳️ Votes
+| Method | Route | Description |
+|--------|-------|-------------|
+| GET | /api/votes/count | Get total upvotes for a specific user |
+| GET | /api/votes/:portaPottyId | Fetch votes for a specific porta potty |
+| POST | /api/votes | Create a new vote |
+| PUT | /api/votes/:id | Update a vote |
+| DELETE | /api/votes/:id | Delete a vote |
+
+### 🎨 Theme
+| Method | Route | Description |
+|--------|-------|-------------|
+| GET | /api/user/theme | Fetch user theme |
+| PUT | /api/user/theme | Update user theme |
 
 ## ⌛ Future Development
-- Fix logo (change colors and export as PNG)
 - Upload photos of porta potties (Firebase)
 - User comments on porta potty objects
 - Moveable markers for easier editing

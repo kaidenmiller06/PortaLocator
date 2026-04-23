@@ -1,7 +1,10 @@
 <html>
   <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="A crowdsourced, community-verified map of porta potty locations built on the Google Maps JavaScript API.">
     <title>PortaLocator</title>
-    <link rel="icon" href="data:,">
+    <link rel="icon" type="image/svg+xml" href="/assets/logo.svg">
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
@@ -9,6 +12,7 @@
   </head>
 
   <body style="margin: 0; padding: 0; display: flex;">
+
     <!-- Profile Button -->
     <div style="position: fixed; top: 1rem; left: 1rem; z-index: 1000;">
       <button class="btn btn-light border rounded-circle theme-btn"
@@ -29,11 +33,20 @@
       </button>
     </div>
 
+
+    
+    <!-- ----------------------------------------------------- -->
     <!-- Map -->
+    <!-- ----------------------------------------------------- -->
+
     <div id="map" style="flex: 1; height: 100vh; width: 100vw;"></div>
 
 
+
+    <!-- ----------------------------------------------------- -->
     <!-- Sidebar -->
+    <!-- ----------------------------------------------------- -->
+
     <div class="sidebar border-start" id="sidebar">
 
 
@@ -41,13 +54,14 @@
       <!-- Create Porta Potty Panel -->
       <!-- ----------------------------------------------------- -->
       <div class="panel d-flex flex-column" id="panel-create">
+
         <!-- Header -->
         <div class="d-flex justify-content-between align-items-center mb-3">
           <h5 class="m-0">New Porta Potty</h5>
           <button type="button" class="btn-close" data-action="close-panel" aria-label="Close"></button>
         </div>
 
-        <!-- Content -->
+        <!-- Body -->
         <div class="px-4 pb-4 d-flex flex-column flex-grow-1">
 
           <div id="miniMap-create" style="width: 100%; height: 150px; border-radius: 8px;" class="mb-4"></div>
@@ -83,6 +97,7 @@
                 <input type="hidden" id="porta_potty_rating" value="0">
               </div>
 
+              <!-- Badges -->
               <div class="mb-2">
                 Badges
               </div>
@@ -121,6 +136,7 @@
             </div>
           </form>
         </div>
+
       </div>
 
 
@@ -128,13 +144,14 @@
       <!-- View Porta Potty Panel -->
       <!-- ----------------------------------------------------- -->
       <div class="panel d-flex flex-column" id="panel-view">
+
         <!-- Header -->
         <div class="d-flex justify-content-between align-items-center mb-3">
           <h5 class="m-0" id="view_porta_potty_name">View Porta Potty</h5>
           <button type="button" class="btn-close" data-action="close-panel" aria-label="Close"></button>
         </div>
 
-        <!-- Content -->
+        <!-- Body -->
         <div class="px-4 pb-4 d-flex flex-column flex-grow-1">
 
           <div id="miniMap-view" style="width: 100%; height: 150px; border-radius: 8px;" class="mb-4"></div>
@@ -165,11 +182,11 @@
               </div>
             </div>
 
+            <!-- Badges -->
             <div id="view_porta_potty_badges_header" class="mb-2">
               Badges
             </div>
 
-            <!-- Badges (Private, Wheelchair, etc.) -->
             <div class="mb-4 d-flex gap-2 flex-wrap">
               <span id="view_porta_potty_private_badge" class="badge rounded-pill bg-secondary d-none">
                 <i class="bi bi-lock-fill me-1"></i>Private
@@ -183,9 +200,11 @@
             </div>
           </div>
 
+          <!-- Action Buttons -->
           <button type="button" class="btn btn-primary w-100 mb-3 mt-auto" id="editPortaPottyBtn">Edit Porta Potty</button>
           <button type="button" class="btn btn-danger w-100 mt-auto" id="deletePortaPottyBtn">Delete Porta Potty</button>
         </div>
+
       </div>
 
 
@@ -193,6 +212,7 @@
       <!-- Edit Porta Potty Panel -->
       <!-- ----------------------------------------------------- -->
       <div class="panel d-flex flex-column" id="panel-edit">
+
         <!-- Header -->
         <div class="d-flex justify-content-between align-items-center mb-3">
           <h5 class="m-0">Edit Porta Potty</h5>
@@ -202,7 +222,7 @@
           </div>
         </div>
 
-        <!-- Content -->
+        <!-- Body -->
         <div class="px-4 pb-4 d-flex flex-column flex-grow-1">
 
           <div id="miniMap-edit" style="width: 100%; height: 150px; border-radius: 8px;" class="mb-4"></div>
@@ -238,6 +258,7 @@
                 <input type="hidden" id="edit_porta_potty_rating" value="0">
               </div>
 
+              <!-- Badges -->
               <div class="mb-2">
                 Badges
               </div>
@@ -276,22 +297,29 @@
             <button type="submit" class="btn btn-primary w-100 mt-auto">Save Changes</button>
           </form>
         </div>
+
       </div>
 
 
     </div>
 
 
+
     <!-- ----------------------------------------------------- -->
     <!-- Profile Modal -->
     <!-- ----------------------------------------------------- -->
+
     <div class="modal fade" id="profileModal" tabindex="-1" aria-labelledby="profileModalLabel" aria-hidden="true">
       <div class="modal-dialog">
         <div class="modal-content">
+
+          <!-- Header -->
           <div class="modal-header">
             <h5 class="modal-title" id="profileModalLabel">Profile</h5>
             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
+
+          <!-- Body -->
           <div class="modal-body px-5 pb-5">
             <div class="d-flex align-items-center gap-3 mb-3">
               <!-- Profile Picture -->
@@ -312,6 +340,8 @@
               <p><strong><i class="bi bi-geo-alt-fill"> </i>Porta Potties:</strong> <span id="profile_porta_potties"></span></p>
               <p><strong><i class="bi bi-caret-up-square-fill"> </i>Votes:</strong> <span id="profile_votes"></span></p>
             </div>
+
+            <!-- Logout Button -->
             <button class="btn btn-danger w-100" id="logoutBtn">Logout</button>
           </div>
         </div>
@@ -319,8 +349,13 @@
     </div>
 
 
+
+    <!-- ----------------------------------------------------- -->
     <!-- Scripts -->
+    <!-- ----------------------------------------------------- -->
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI" crossorigin="anonymous"></script>
     <script type="module" src="./index.js"></script>
+
   </body>
 </html>

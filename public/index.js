@@ -1,17 +1,19 @@
-let map, infoWindow, tempMarkers = [], selectedLatLng = null, curPanel = null;
-let originalPortaPotty = {};
+let map, infoWindow, AdvancedMarkerElement, PinElement;
+
 const portaPottyMarkers = new Map();
-const miniMaps = {};
-let AdvancedMarkerElement;
-let PinElement;
+let tempMarkers = [];
+
+let currentUser = null;
+
+let originalPortaPotty = {}, selectedLatLng = null, curPanel = null;
+
+let currentVote = null, currentPortaPottyId = null;
 
 
 
 // -----------------------------------------------------
 // User Authentication State
 // -----------------------------------------------------
-
-let currentUser = null;
 
 /**
  * Fetches the current authenticated user from the backend API and stores it in the `currentUser` variable.
@@ -38,20 +40,15 @@ async function loadCurrentUser() {
   }
 }
 
-// Load only current user id on initial page load
-document.addEventListener('DOMContentLoaded', async () => {
-  const res = await fetch('/api/me');
-  if (res.ok) {
-    const user = await res.json();
-    currentUser = { id: user.id };
-  }
-});
+loadCurrentUser();
 
 
 
 // -----------------------------------------------------
 // Google Maps Initialization
 // -----------------------------------------------------
+
+const miniMaps = {};
 
 /**
  * Initializes the Google Map, attempts to get user's location, and sets up click listener for creating new porta potty entries.
@@ -237,15 +234,11 @@ function createMarker(portaPotty) {
   const lat = parseFloat(portaPotty.latitude);
   const lng = parseFloat(portaPotty.longitude);
 
-  const img = document.createElement("img");
-  img.src = "/assets/logo.svg";
-  img.style.width = "16px";
-  img.style.height = "16px";
-
   const pin = new PinElement({
-    glyph: img,
-    background: '#6f42c1',
-    borderColor: '#391e6c',
+    glyphColor: '#084298',
+    background: '#0d6efd',
+    borderColor: '#084298',
+    scale: 1.25,
   });
 
   const marker = new AdvancedMarkerElement({
@@ -334,14 +327,19 @@ async function openPanel(type, data = {}) {
     }
   };
 
+
   // -----------------------------------------------------
   // Open create panel with map click location
   // -----------------------------------------------------
   if (type === 'create') {
     const { latLng, map } = data;
     clearTempMarkers();
-    selectedLatLng = latLng;
-    tempMarkers.push(new AdvancedMarkerElement({ position: latLng, map }));
+    selectedLatLng = { lat: latLng.lat(), lng: latLng.lng() };
+    tempMarkers.push(new AdvancedMarkerElement({
+      position: latLng,
+      map,
+      content: new PinElement({ scale: 1.25 })
+    }));
 
     afterSidebarOpen(() => {
       map.panTo(latLng);
@@ -370,8 +368,11 @@ async function openPanel(type, data = {}) {
 
     // Populate fields immediately
     document.getElementById('view_porta_potty_name').textContent = portaPotty.name;
-    document.getElementById('view_porta_potty_description').textContent = portaPotty.description;
-    document.getElementById('view_porta_potty_description').parentElement.classList.toggle('d-none', !portaPotty.description);
+
+    const viewDesc = document.getElementById('view_porta_potty_description');
+    viewDesc.textContent = portaPotty.description;
+    viewDesc.parentElement.classList.toggle('d-none', !portaPotty.description);
+
     document.getElementById('view_porta_potty_rating').value = portaPotty.rating;
 
     updateStars(viewStars, portaPotty.rating);
@@ -476,9 +477,31 @@ async function openPanel(type, data = {}) {
     sidebar.classList.add('open');
   }
 
-  setTimeout(() => {
-    document.getElementById('panel-' + type).classList.add('active');
-  }, curPanel ? 0 : 10);
+  // Animate panel sliding in from right for view panel and follow default slide in for others
+  const panel = document.getElementById('panel-' + type);
+
+  if (type === 'view') {
+    // animated slide-in if already on view panel to avoid jitter
+    panel.style.transition = 'none';
+    panel.style.transform = 'translateX(100%)';
+
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        panel.style.transition = '';
+        panel.style.transform = '';
+        panel.classList.add('active');
+      });
+    });
+  } else if (type === 'create' && curPanel === 'create') {
+    // no animation if already on create panel to avoid jitter
+    panel.style.transition = 'none';
+    panel.classList.add('active');
+    requestAnimationFrame(() => {
+      panel.style.transition = '';
+    });
+  } else {
+    setTimeout(() => panel.classList.add('active'), 10);
+  }
 
   curPanel = type;
 }
@@ -542,12 +565,14 @@ function updateProfileUI() {
   const potties = document.getElementById('profile_porta_potties');
   const votes = document.getElementById('profile_votes');
 
-  // Guard: only run if these elements exist on the current page
+  // Run if these elements exist on the current page
   if (!name || !email || !potties || !votes || !createdAt) return;
 
   name.textContent = currentUser?.firstName + ' ' + currentUser?.lastName ?? '';
   email.textContent = currentUser?.email ?? '';
-  createdAt.textContent = currentUser?.createdAt ? new Date(currentUser.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long' }) : '';
+  createdAt.textContent = currentUser?.createdAt
+    ? new Date(currentUser.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long' })
+    : '';
   potties.textContent = currentUser?.portaPottyCount ?? '0';
   votes.textContent = currentUser?.voteCount ?? '0';
 
@@ -556,9 +581,6 @@ function updateProfileUI() {
     img.onload = () => {
       icon.classList.add('d-none');
       img.classList.remove('d-none');
-    };
-    img.onerror = () => {
-      // URL failed to load, icon stays visible
     };
   }
 }
@@ -611,8 +633,8 @@ createPortaPottyForm.addEventListener('submit', async function (e) {
   }
   const user = await meRes.json();
 
-  const latitude = selectedLatLng.lat();
-  const longitude = selectedLatLng.lng();
+  const latitude = selectedLatLng.lat;
+  const longitude = selectedLatLng.lng;
   const description = document.getElementById('porta_potty_description').value;
   const rating = document.getElementById('porta_potty_rating').value;
   const isPrivate = document.getElementById('porta_potty_private').checked ? 1 : 0;
@@ -765,9 +787,6 @@ const upvoteBtn = document.getElementById('upvoteBtn');
 const downvoteBtn = document.getElementById('downvoteBtn');
 const voteCount = document.getElementById('voteCount');
 
-let currentVote = null;
-let currentPortaPottyId = null;
-
 document.addEventListener('DOMContentLoaded', () => {
   upvoteBtn.addEventListener('click', () => handleVote(1));
   downvoteBtn.addEventListener('click', () => handleVote(0));
@@ -888,7 +907,9 @@ function updateStars(stars, rating) {
 // -----------------------------------------------------
 
 /**
- * Toggles the website theme between light and dark modes, updates the data attribute on the body, and persists the user's preference to the backend.
+ * Toggles the website theme between light and dark modes,
+ * updates the data attribute on the body,
+ * and persists the user's preference to the backend.
  */
 async function toggleTheme() {
   closePanel();
