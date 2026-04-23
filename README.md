@@ -12,10 +12,10 @@ A crowdsourced, community-verified map of porta potty locations built on the Goo
 
 ## 📚 Table of Contents
 - [Features](#-features)
-- [Installation](#-installation)
+- [Installation](#%EF%B8%8F-installation)
 - [Quick Start](#-quick-start)
 - [Routes](#-routes)
-- [Database Structure](#-database-structure)
+- [Database Structure](#%EF%B8%8F-database-structure)
 - [API Endpoints](#-api-endpoints)
 - [Future Development](#-future-development)
 
