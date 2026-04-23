@@ -6,7 +6,10 @@
 ![Google Maps API](https://img.shields.io/badge/Google_Maps_API-4285F4?style=for-the-badge&logo=googlemaps&logoColor=white)
 ![Bootstrap](https://img.shields.io/badge/Bootstrap-7952B3?style=for-the-badge&logo=bootstrap&logoColor=white)
 
-# PortaLocator
+<h1>
+  <img src="assets/logo.svg" width="50" style="vertical-align: middle; margin-bottom: 10px;" />
+  PortaLocator
+</h1>
 
 A crowdsourced, community-verified map of porta potty locations built on the Google Maps JavaScript API.
 
