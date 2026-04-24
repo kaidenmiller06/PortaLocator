@@ -11,7 +11,7 @@
   PortaLocator
 </h1>
 
-A crowdsourced, community-verified map of porta potty locations built on the Google Maps JavaScript API.
+A crowdsourced, community-verified map of porta potty locations built on the Google Maps JavaScript API. Made for runners, cyclists, and anyone on the go who needs to find a restroom in a pinch.
 
 ## 📚 Table of Contents
 - [Features](#-features)
